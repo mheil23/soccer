@@ -1298,13 +1298,10 @@ export function initFormationSelector(getState, setState) {
       // Remove from state and persist
       const newState = deleteCustomFormation(state, formationId);
 
-      // If the deleted formation was active, switch to default
-      if (state.activeFormationKey === formationId) {
-        const resetState = applyFormation(newState, null);
-        setState(resetState);
-      } else {
-        setState(newState);
-      }
+      // Apply the default formation for the current format
+      const defaultFormationId = `${newState.format}-${DEFAULT_FORMATION[newState.format]}`;
+      const resetState = applyFormation(newState, defaultFormationId);
+      setState(resetState);
 
       persistCustomFormations(newState.customFormations);
       refreshFormations();
