@@ -19,7 +19,7 @@ Use the **Formation** dropdown to select a preset formation (e.g., 4-3-3, 3-5-2)
 To create a custom formation:
 1. Select **Custom** from the Formation dropdown
 2. Drag players to your desired positions
-3. Double-click a player to rename their position label
+3. Double-click a player to rename their position label (on mobile, long-press and hold for half a second)
 4. Type a name and click **💾 Save** to keep it
 
 Saved formations appear in the dropdown under "Saved" for future use.
@@ -85,7 +85,7 @@ Click **📷 Export** to download the current field view as a PNG image. Share w
 - Switch between formations to see how your players would shift
 - Use moments + arrows together to plan set pieces visually
 - Export images before and after adjustments to show players the difference
-- Works on phones and tablets too — drag with your finger
+- Works on phones and tablets too — drag with your finger, long-press to rename tokens
 
 ## Data & Privacy
 
