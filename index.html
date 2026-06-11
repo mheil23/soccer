@@ -252,8 +252,9 @@
 
     #field-svg {
       width: 100%;
-      height: 100%;
-      max-height: calc(100vh - 120px);
+      height: auto;
+      max-height: calc(100vh - 60px);
+      max-width: 100%;
       /* Keep the 68:105 aspect ratio (portrait) */
       aspect-ratio: 68 / 105;
       object-fit: contain;
@@ -400,6 +401,29 @@
 
     /* ─── Responsive ─────────────────────────────────────────────────────── */
     @media (max-width: 640px) {
+      #toolbar {
+        padding: 0.4rem 0.5rem;
+        gap: 0.35rem;
+        max-height: 30vh;
+        overflow-y: auto;
+      }
+
+      #main {
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      #field-container {
+        padding: 0.25rem;
+        min-height: 0;
+      }
+
+      #field-svg {
+        max-height: none;
+        width: 100%;
+        height: auto;
+      }
+
       #description-panel {
         position: absolute;
         top: 0; right: 0; bottom: 0;
@@ -407,6 +431,10 @@
         width: 80vw;
         z-index: 100;
         box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+      }
+
+      .toolbar-sep {
+        display: none;
       }
     }
   </style>
