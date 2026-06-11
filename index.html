@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soccer Formations Tool</title>
+  <style>
+    /* ─── Reset & Base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Notification Banner ────────────────────────────────────────────── */
+    #notification-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .notification {
+      background: #c0392b;
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+      text-align: center;
+      pointer-events: auto;
+      animation: slideDown 0.2s ease-out;
+    }
+
+    .notification.info  { background: #2980b9; }
+    .notification.warn  { background: #e67e22; }
+    .notification.error { background: #c0392b; }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
+    }
+
+    /* ─── Format Toolbar ─────────────────────────────────────────────────── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      flex-wrap: wrap;
+    }
+
+    #toolbar h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-right: auto;
+    }
+
+    /* Vertical separator between control groups */
+    .toolbar-sep {
+      width: 1px;
+      height: 1.6rem;
+      background: #0f3460;
+      margin: 0 0.25rem;
+    }
+
+    /* ─── Shared control styles ──────────────────────────────────────────── */
+    .format-btn,
+    #toolbar button {
+      padding: 0.35rem 0.8rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .format-btn:hover,
+    #toolbar button:hover {
+      background: #0f3460;
+      color: #fff;
+      border-color: #1a4a8a;
+    }
+
+    .format-btn[aria-pressed="true"] {
+      background: #1E6FE8;
+      border-color: #1E6FE8;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    #toolbar button.danger {
+      color: #e74c3c;
+      border-color: #5a1a1a;
+    }
+    #toolbar button.danger:hover {
+      background: #5a1a1a;
+      color: #ff6b6b;
+      border-color: #e74c3c;
+    }
+
+    /* ─── Select dropdowns ───────────────────────────────────────────────── */
+    #toolbar select {
+      padding: 0.35rem 0.6rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.85rem;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      padding-right: 1.6rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    #toolbar select:hover {
+      border-color: #1a4a8a;
+      background-color: #0f3460;
+    }
+
+    #toolbar select:focus {
+      outline: none;
+      border-color: #1E6FE8;
+      box-shadow: 0 0 0 2px rgba(30, 111, 232, 0.2);
+    }
+
+    #toolbar select:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ─── Text inputs ────────────────────────────────────────────────────── */
+    #toolbar input[type="text"] {
+      padding: 0.35rem 0.6rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 0.85rem;
+      transition: border-color 0.15s;
+      width: 160px;
+    }
+
+    #toolbar input[type="text"]:focus {
+      outline: none;
+      border-color: #1E6FE8;
+      box-shadow: 0 0 0 2px rgba(30, 111, 232, 0.2);
+    }
+
+    #toolbar input[type="text"]::placeholder {
+      color: #666;
+    }
+
+    /* ─── Toggle switch (replaces checkbox) ──────────────────────────────── */
+    #opponent-toggle-label {
+      font-size: 0.85rem;
+      color: #ccc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      user-select: none;
+    }
+
+    #opponent-toggle {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 2.2rem;
+      height: 1.2rem;
+      background: #0f3460;
+      border-radius: 0.6rem;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1.5px solid #1a4a8a;
+    }
+
+    #opponent-toggle::after {
+      content: '';
+      position: absolute;
+      width: 0.85rem;
+      height: 0.85rem;
+      background: #888;
+      border-radius: 50%;
+      top: 50%;
+      left: 2px;
+      transform: translateY(-50%);
+      transition: left 0.2s, background 0.2s;
+    }
+
+    #opponent-toggle:checked {
+      background: #1E6FE8;
+      border-color: #1E6FE8;
+    }
+
+    #opponent-toggle:checked::after {
+      left: calc(100% - 0.85rem - 2px);
+      background: #fff;
+    }
+
+    /* ─── Labels ─────────────────────────────────────────────────────────── */
+    #toolbar label[for] {
+      font-size: 0.8rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── Control groups ─────────────────────────────────────────────────── */
+    #moment-controls,
+    #custom-formation-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ─── Main Layout ────────────────────────────────────────────────────── */
+    #main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─── Field Container ────────────────────────────────────────────────── */
+    #field-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      min-width: 0;
+    }
+
+    #field-svg {
+      width: 100%;
+      height: 100%;
+      max-height: calc(100vh - 120px);
+      /* Keep the 68:105 aspect ratio (portrait) */
+      aspect-ratio: 68 / 105;
+      object-fit: contain;
+      display: block;
+      touch-action: none; /* prevent scroll interference with pointer events */
+    }
+
+    /* ─── Position Description Panel ────────────────────────────────────── */
+    #description-panel {
+      width: 38%;
+      max-width: 38vw;
+      min-width: 240px;
+      background: #16213e;
+      border-left: 1px solid #0f3460;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: none; /* hidden until a token is selected */
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    #description-panel.visible {
+      display: flex;
+    }
+
+    #description-panel h2 {
+      font-size: 1.1rem;
+      color: #e0e0e0;
+    }
+
+    #description-panel .role-desc {
+      font-size: 0.9rem;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    #description-panel .attributes-list {
+      list-style: disc;
+      padding-left: 1.25rem;
+      font-size: 0.85rem;
+      color: #bbb;
+    }
+
+    #description-panel .responsibilities {
+      font-size: 0.9rem;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    #description-panel .no-desc {
+      font-size: 0.9rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    #dismiss-panel-btn {
+      align-self: flex-end;
+      padding: 0.3rem 0.75rem;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      background: transparent;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+
+    #dismiss-panel-btn:hover { background: #0f3460; }
+
+    /* ─── Token Animation ────────────────────────────────────────────────── */
+    #tokens-layer g {
+      transition: transform 0.3s ease-out;
+    }
+
+    #tokens-layer g.dragging {
+      transition: none; /* disable animation during drag for responsiveness */
+    }
+
+    /* ─── Drag Visual Feedback ───────────────────────────────────────────── */
+    #tokens-layer g.dragging circle {
+      filter: drop-shadow(0 0 2px rgba(255,255,255,0.8));
+      stroke-width: 0.6;
+    }
+
+    /* ─── Confirmation Dialog ────────────────────────────────────────────── */
+    #confirm-dialog {
+      border: none;
+      border-radius: 8px;
+      background: #16213e;
+      color: #f0f0f0;
+      padding: 1.5rem;
+      max-width: 420px;
+      width: 90vw;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    #confirm-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    #confirm-dialog h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    #confirm-dialog p {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .btn-confirm {
+      padding: 0.45rem 1rem;
+      background: #1E6FE8;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+
+    .btn-confirm:hover { background: #1658c0; }
+
+    .btn-cancel {
+      padding: 0.45rem 1rem;
+      background: transparent;
+      color: #ccc;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+
+    .btn-cancel:hover { background: #0f3460; }
+
+    /* ─── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      #description-panel {
+        position: absolute;
+        top: 0; right: 0; bottom: 0;
+        max-width: 80vw;
+        width: 80vw;
+        z-index: 100;
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Notification banner: queued storage/error messages, auto-dismiss after 5s -->
+  <div id="notification-banner" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Format-selector toolbar -->
+  <header id="toolbar">
+    <h1>⚽ Soccer Formations</h1>
+
+    <div role="group" aria-label="Game format">
+      <button class="format-btn" id="btn-7v7"   aria-pressed="false" data-format="7v7">7v7</button>
+      <button class="format-btn" id="btn-9v9"   aria-pressed="false" data-format="9v9">9v9</button>
+      <button class="format-btn" id="btn-11v11" aria-pressed="true"  data-format="11v11">11v11</button>
+    </div>
+
+    <span id="player-count" style="font-size:0.75rem; color:#888;">Players: 11</span>
+
+    <span class="toolbar-sep"></span>
+
+    <label for="formation-select">Formation:</label>
+    <select id="formation-select" aria-label="Select formation"></select>
+    <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
+
+    <span class="toolbar-sep"></span>
+
+    <!-- Opponent Overlay Controls -->
+    <label id="opponent-toggle-label">
+      <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
+      Opponent
+    </label>
+    <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;">
+    </select>
+
+    <span class="toolbar-sep"></span>
+
+    <button id="reset-btn" aria-label="Reset field to formation defaults">↺ Reset</button>
+    <button id="toggle-info-btn" aria-label="Toggle position info panel" aria-pressed="false" style="opacity:0.5;">ℹ️ Info</button>
+    <button id="export-btn" aria-label="Export field as PNG image">📷 Export</button>
+    <button id="arrow-mode-btn" aria-label="Toggle arrow drawing mode" aria-pressed="false">🏹 Arrows</button>
+    <button id="clear-arrows-btn" aria-label="Clear all arrows" style="display:none;">✕ Clear</button>
+
+    <span class="toolbar-sep"></span>
+
+    <!-- Moments selector -->
+    <select id="moments-select" aria-label="Select situational moment">
+      <option value="">— Moments —</option>
+    </select>
+
+    <!-- Moment save/delete controls -->
+    <div id="moment-controls" role="group" aria-label="Moment controls">
+      <input id="save-moment-name" type="text" maxlength="50" placeholder="Moment name" aria-label="Moment name" />
+      <button id="save-moment-btn" aria-label="Save as Moment">💾 Save</button>
+      <button id="duplicate-moment-btn" aria-label="Duplicate current moment" style="display:none;">📋 Copy</button>
+      <button id="delete-moment-btn" class="danger" aria-label="Delete saved moment" style="display:none;">🗑 Delete</button>
+    </div>
+
+    <!-- Custom formation save controls (visible in custom mode) -->
+    <div id="custom-formation-controls" style="display:none;" role="group" aria-label="Custom formation controls">
+      <input id="save-formation-name" type="text" maxlength="50" placeholder="Formation name" aria-label="Custom formation name" />
+      <button id="save-formation-btn" aria-label="Save custom formation">💾 Save</button>
+    </div>
+  </header>
+
+  <!-- Main content area -->
+  <main id="main">
+
+    <!-- SVG field container -->
+    <div id="field-container" aria-label="Soccer field" style="position: relative;">
+      <!-- Inline label editor for custom formation tokens -->
+      <input id="token-label-input" type="text" maxlength="20" aria-label="Edit token label" style="display:none; position:absolute; width:80px; z-index:50; font-size:0.85rem; text-align:center; padding:2px 4px; border:1px solid #1E6FE8; border-radius:3px; background:#16213e; color:#fff;" />
+      <svg id="field-svg"
+           viewBox="0 0 68 105"
+           xmlns="http://www.w3.org/2000/svg"
+           role="img"
+           aria-label="Interactive soccer pitch"
+           focusable="false">
+        <!-- Field markings are rendered by renderer.js -->
+        <g id="field-markings"></g>
+        <!-- Movement arrows layer (between field markings and tokens) -->
+        <g id="arrows-layer"></g>
+        <!-- Position tokens are rendered by renderer.js -->
+        <g id="tokens-layer"></g>
+        <!-- Ball is rendered by renderer.js -->
+        <g id="ball-layer"></g>
+      </svg>
+    </div>
+
+    <!-- Position description aside panel -->
+    <aside id="description-panel" aria-label="Position description" aria-hidden="true">
+      <button id="dismiss-panel-btn" aria-label="Close position description panel">✕ Close</button>
+      <div id="description-content">
+        <!-- Populated by renderer.js when a token is selected -->
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Reusable confirmation dialog -->
+  <dialog id="confirm-dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <h3 id="dialog-title">Confirm</h3>
+    <p id="dialog-message">Are you sure?</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="dialog-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="dialog-confirm-btn">Confirm</button>
+    </div>
+  </dialog>
+
+  <!-- Name conflict dialog for custom formations -->
+  <dialog id="name-conflict-dialog" aria-modal="true" aria-labelledby="conflict-dialog-title">
+    <h3 id="conflict-dialog-title">Name Conflict</h3>
+    <p id="conflict-message">A formation with this name already exists.</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="conflict-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="conflict-rename-btn">Rename</button>
+      <button class="btn-confirm" id="conflict-overwrite-btn">Overwrite</button>
+    </div>
+  </dialog>
+
+  <!-- Name conflict dialog for moments -->
+  <dialog id="moment-conflict-dialog" aria-modal="true" aria-labelledby="moment-conflict-dialog-title">
+    <h3 id="moment-conflict-dialog-title">Name Conflict</h3>
+    <p id="moment-conflict-message">A moment with this name already exists.</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="moment-conflict-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="moment-conflict-rename-btn">Rename</button>
+      <button class="btn-confirm" id="moment-conflict-overwrite-btn">Overwrite</button>
+    </div>
+  </dialog>
+
+  <!-- ES module entry point -->
+  <script type="module" src="src/controller.js"></script>
+
+</body>
+</html>
