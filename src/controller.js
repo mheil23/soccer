@@ -1242,7 +1242,35 @@ export function initFormationSelector(getState, setState) {
     }
 
     // Apply preset formation (reconciles token count per Property 3)
-    const newState = applyFormation(state, formationId);
+    // First check if it's a user-saved custom formation
+    const customFormation = state.customFormations.find((f) => f.id === formationId);
+    let newState;
+
+    if (customFormation) {
+      // Apply saved custom formation from state
+      const ownTokens = customFormation.positions.map((pos, i) => ({
+        id: `own-${i}`,
+        team: 'own',
+        label: pos.label,
+        nx: pos.nx,
+        ny: pos.ny,
+        formationKey: '',
+      }));
+
+      newState = {
+        ...state,
+        activeFormationKey: customFormation.id,
+        activeFormationName: customFormation.name,
+        ownTokens,
+        ball: { nx: 0.5, ny: 0.5 },
+        activeMomentKey: null,
+        activeMomentSnapshot: null,
+      };
+    } else {
+      // Apply preset formation
+      newState = applyFormation(state, formationId);
+    }
+
     setState(newState);
 
     updateFormationLabel(newState);
