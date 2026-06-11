@@ -851,13 +851,13 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
   const saveNameInput = document.getElementById('save-formation-name');
   const labelInput = document.getElementById('token-label-input');
 
-  // ─── Token label editing ──────────────────────────────────────────────
+  // ─── Token label editing (dblclick on desktop, long-press on mobile) ──
   if (svgEl && labelInput) {
+    // Desktop: double-click
     svgEl.addEventListener('dblclick', (e) => {
       const state = getState();
       if (state.activeFormationKey !== 'custom') return;
 
-      // Find the token that was double-clicked
       let el = e.target;
       while (el && el.tagName !== 'svg') {
         const id = el.getAttribute('id');
@@ -868,6 +868,45 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
         el = el.parentElement;
       }
     });
+
+    // Mobile: long-press (500ms hold)
+    let longPressTimer = null;
+    let longPressTarget = null;
+
+    svgEl.addEventListener('touchstart', (e) => {
+      const state = getState();
+      if (state.activeFormationKey !== 'custom') return;
+
+      // Find the token being touched
+      let el = e.target;
+      while (el && el.tagName !== 'svg') {
+        const id = el.getAttribute('id');
+        if (id && id.startsWith('own-')) {
+          longPressTarget = id;
+          longPressTimer = setTimeout(() => {
+            showLabelEditor(longPressTarget, getState, setState, labelInput, svgEl);
+            longPressTarget = null;
+          }, 500);
+          return;
+        }
+        el = el.parentElement;
+      }
+    }, { passive: true });
+
+    svgEl.addEventListener('touchmove', () => {
+      // Cancel long-press if finger moves (it's a drag, not a hold)
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }, { passive: true });
+
+    svgEl.addEventListener('touchend', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }, { passive: true });
   }
 
   // ─── Save Formation Button ────────────────────────────────────────────
