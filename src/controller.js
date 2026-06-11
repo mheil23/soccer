@@ -950,6 +950,7 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
           };
           setState(newState);
           persistCustomFormations(newState.customFormations);
+          refreshFormationDropdown(newState);
         } else if (choice === 'rename') {
           // User wants to pick a different name — refocus the input
           if (saveNameInput) {
@@ -967,6 +968,9 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
       const finalState = { ...newState, _customSaved: true };
       setState(finalState);
       persistCustomFormations(finalState.customFormations);
+
+      // Refresh formation dropdown to show the new saved formation
+      refreshFormationDropdown(finalState);
 
       // Clear the name input after successful save
       if (saveNameInput) {
@@ -1043,6 +1047,49 @@ function showLabelEditor(tokenId, getState, setState, inputEl, svgEl) {
 
   inputEl.addEventListener('blur', commitLabel);
   inputEl.addEventListener('keydown', onKeyDown);
+}
+
+/**
+ * Refresh the formation dropdown to reflect current state (presets + saved + custom).
+ * @param {object} state - Current app state
+ */
+function refreshFormationDropdown(state) {
+  const select = document.getElementById('formation-select');
+  if (!select) return;
+
+  select.innerHTML = '';
+
+  // Preset formations for the active format
+  const formations = getFormationsForFormat(state.format);
+  for (const f of formations) {
+    const option = document.createElement('option');
+    option.value = f.id;
+    option.textContent = f.name;
+    if (f.id === state.activeFormationKey) option.selected = true;
+    select.appendChild(option);
+  }
+
+  // Saved custom formations for the active format
+  const customForFormat = state.customFormations.filter((f) => f.format === state.format);
+  if (customForFormat.length > 0) {
+    const savedGroup = document.createElement('optgroup');
+    savedGroup.label = 'Saved';
+    for (const f of customForFormat) {
+      const option = document.createElement('option');
+      option.value = f.id;
+      option.textContent = f.name;
+      if (f.id === state.activeFormationKey) option.selected = true;
+      savedGroup.appendChild(option);
+    }
+    select.appendChild(savedGroup);
+  }
+
+  // Custom entry
+  const customOption = document.createElement('option');
+  customOption.value = 'custom';
+  customOption.textContent = 'Custom';
+  if (state.activeFormationKey === 'custom') customOption.selected = true;
+  select.appendChild(customOption);
 }
 
 /**
