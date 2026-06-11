@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Soccer Formations Tool</title>
   <style>
     /* ─── Reset & Base ───────────────────────────────────────────────────── */
@@ -401,6 +401,12 @@
 
     /* ─── Responsive ─────────────────────────────────────────────────────── */
     @media (max-width: 640px) {
+      /* Prevent iOS Safari auto-zoom on input focus */
+      input[type="text"],
+      select {
+        font-size: 16px !important;
+      }
+
       #toolbar {
         padding: 0.4rem 0.5rem;
         gap: 0.35rem;
