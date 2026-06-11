@@ -67,6 +67,11 @@
       margin-right: auto;
     }
 
+    /* Hidden on desktop, shown via mobile media query */
+    #toolbar-toggle {
+      display: none;
+    }
+
     /* Vertical separator between control groups */
     .toolbar-sep {
       width: 1px;
@@ -407,6 +412,26 @@
         font-size: 16px !important;
       }
 
+      #toolbar-toggle {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border: 1.5px solid #0f3460;
+        border-radius: 6px;
+        background: #1a1a2e;
+        color: #ccc;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      #toolbar.collapsed > *:not(h1):not(#toolbar-toggle) {
+        display: none !important;
+      }
+
+      #toolbar.collapsed {
+        max-height: none;
+        overflow: visible;
+      }
+
       #toolbar {
         padding: 0.4rem 0.5rem;
         gap: 0.35rem;
@@ -453,6 +478,7 @@
   <!-- Format-selector toolbar -->
   <header id="toolbar">
     <h1>⚽ Soccer Formations</h1>
+    <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
 
     <div role="group" aria-label="Game format">
       <button class="format-btn" id="btn-7v7"   aria-pressed="false" data-format="7v7">7v7</button>
@@ -576,6 +602,21 @@
 
   <!-- ES module entry point -->
   <script type="module" src="src/controller.js"></script>
+
+  <!-- Toolbar collapse toggle (mobile) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toolbar = document.getElementById('toolbar');
+      const toggle = document.getElementById('toolbar-toggle');
+      if (!toolbar || !toggle) return;
+
+      toggle.addEventListener('click', () => {
+        const isCollapsed = toolbar.classList.toggle('collapsed');
+        toggle.textContent = isCollapsed ? '▼ Menu' : '▲';
+        toggle.setAttribute('aria-expanded', String(!isCollapsed));
+      });
+    });
+  </script>
 
 </body>
 </html>
