@@ -2033,7 +2033,7 @@ export function initArrowMode(getState, setState) {
       const visiblePath = arrowGroup.querySelectorAll('path')[1];
       if (visiblePath) {
         visiblePath.setAttribute('stroke', '#ffdd44');
-        visiblePath.setAttribute('stroke-width', '0.7');
+        visiblePath.setAttribute('stroke-width', '1.1');
         visiblePath.setAttribute('opacity', '1');
       }
     }
@@ -2048,7 +2048,7 @@ export function initArrowMode(getState, setState) {
         const visiblePath = arrowGroup.querySelectorAll('path')[1];
         if (visiblePath) {
           visiblePath.setAttribute('stroke', '#f0c040');
-          visiblePath.setAttribute('stroke-width', '0.6');
+          visiblePath.setAttribute('stroke-width', '0.8');
           visiblePath.setAttribute('opacity', '0.85');
         }
       }
@@ -2267,8 +2267,8 @@ export function initArrowMode(getState, setState) {
     if (arrowDragContext) {
       arrowDragContext = null;
       justDraggedArrow = true;
-      // Reset the flag after a short delay (after the click event fires)
-      setTimeout(() => { justDraggedArrow = false; }, 100);
+      // Reset the flag after a longer delay (mobile click events can fire late)
+      setTimeout(() => { justDraggedArrow = false; }, 300);
       // Re-select the arrow to restore highlight after re-render
       if (selectedArrowId) {
         setTimeout(() => selectArrow(selectedArrowId), 0);
