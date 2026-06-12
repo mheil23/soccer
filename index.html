@@ -510,7 +510,6 @@
     <button id="toggle-info-btn" aria-label="Toggle position info panel" aria-pressed="false" style="opacity:0.5;">ℹ️ Info</button>
     <button id="export-btn" aria-label="Export field as PNG image">📷 Export</button>
     <button id="arrow-mode-btn" aria-label="Toggle arrow drawing mode" aria-pressed="false">🏹 Arrows</button>
-    <button id="delete-arrow-btn" class="danger" aria-label="Delete selected arrow" style="display:none;">🗑 Arrow</button>
     <button id="clear-arrows-btn" aria-label="Clear all arrows" style="display:none;">✕ Clear</button>
 
     <span class="toolbar-sep"></span>
@@ -540,6 +539,8 @@
 
     <!-- SVG field container -->
     <div id="field-container" aria-label="Soccer field" style="position: relative;">
+      <!-- Floating delete arrow button (visible when arrow selected) -->
+      <button id="delete-arrow-btn" class="danger" aria-label="Delete selected arrow" style="display:none; position:absolute; top:8px; right:8px; z-index:60; padding:0.4rem 0.7rem; border:1.5px solid #e74c3c; border-radius:6px; background:#1a1a2e; color:#e74c3c; font-size:0.85rem; cursor:pointer;">🗑 Delete Arrow</button>
       <!-- Inline label editor for custom formation tokens -->
       <input id="token-label-input" type="text" maxlength="20" aria-label="Edit token label" style="display:none; position:absolute; width:80px; z-index:50; font-size:0.85rem; text-align:center; padding:2px 4px; border:1px solid #1E6FE8; border-radius:3px; background:#16213e; color:#fff;" />
       <svg id="field-svg"
