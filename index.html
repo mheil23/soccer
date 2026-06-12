@@ -52,12 +52,26 @@
     /* ─── Format Toolbar ─────────────────────────────────────────────────── */
     #toolbar {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.6rem 1rem;
+      flex-direction: column;
       background: #16213e;
       border-bottom: 1px solid #0f3460;
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
       flex-wrap: wrap;
+    }
+
+    .toolbar-row-primary {
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .toolbar-row-secondary {
+      padding: 0.35rem 1rem;
+      background: #131d36;
     }
 
     #toolbar h1 {
@@ -70,6 +84,12 @@
     /* Hidden on desktop, shown via mobile media query */
     #toolbar-toggle {
       display: none;
+    }
+
+    #player-count {
+      font-size: 0.75rem;
+      color: #666;
+      margin-left: auto;
     }
 
     /* Vertical separator between control groups */
@@ -423,20 +443,27 @@
         cursor: pointer;
       }
 
-      #toolbar.collapsed > *:not(h1):not(#toolbar-toggle) {
+      #toolbar.collapsed .toolbar-row-primary > *:not(h1):not(#toolbar-toggle) {
         display: none !important;
       }
 
-      #toolbar.collapsed {
-        max-height: none;
-        overflow: visible;
+      #toolbar.collapsed .toolbar-row-secondary {
+        display: none !important;
+      }
+
+      #toolbar.collapsed .toolbar-row-primary {
+        border-bottom: none;
       }
 
       #toolbar {
-        padding: 0.4rem 0.5rem;
-        gap: 0.35rem;
-        max-height: 30vh;
+        gap: 0;
+        max-height: 40vh;
         overflow-y: auto;
+      }
+
+      .toolbar-row {
+        padding: 0.35rem 0.5rem;
+        gap: 0.3rem;
       }
 
       #main {
@@ -477,60 +504,57 @@
 
   <!-- Format-selector toolbar -->
   <header id="toolbar">
-    <h1>⚽ Soccer Formations</h1>
-    <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
+    <div class="toolbar-row toolbar-row-primary">
+      <h1>⚽ Soccer Formations</h1>
+      <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
 
-    <div role="group" aria-label="Game format">
-      <button class="format-btn" id="btn-7v7"   aria-pressed="false" data-format="7v7">7v7</button>
-      <button class="format-btn" id="btn-9v9"   aria-pressed="false" data-format="9v9">9v9</button>
-      <button class="format-btn" id="btn-11v11" aria-pressed="true"  data-format="11v11">11v11</button>
+      <div role="group" aria-label="Game format" class="format-group">
+        <button class="format-btn" id="btn-7v7"   aria-pressed="false" data-format="7v7">7v7</button>
+        <button class="format-btn" id="btn-9v9"   aria-pressed="false" data-format="9v9">9v9</button>
+        <button class="format-btn" id="btn-11v11" aria-pressed="true"  data-format="11v11">11v11</button>
+      </div>
+
+      <span class="toolbar-sep"></span>
+
+      <label for="formation-select">Formation:</label>
+      <select id="formation-select" aria-label="Select formation"></select>
+      <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
+
+      <span class="toolbar-sep"></span>
+
+      <label id="opponent-toggle-label">
+        <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
+        Opponent
+      </label>
+      <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;"></select>
     </div>
 
-    <span id="player-count" style="font-size:0.75rem; color:#888;">Players: 11</span>
+    <div class="toolbar-row toolbar-row-secondary">
+      <select id="moments-select" aria-label="Select situational moment">
+        <option value="">— Moments —</option>
+      </select>
 
-    <span class="toolbar-sep"></span>
+      <div id="moment-controls" role="group" aria-label="Moment controls">
+        <input id="save-moment-name" type="text" maxlength="50" placeholder="Moment name" aria-label="Moment name" />
+        <button id="save-moment-btn" aria-label="Save as Moment">💾 Save</button>
+        <button id="duplicate-moment-btn" aria-label="Duplicate current moment" style="display:none;">📋 Copy</button>
+        <button id="delete-moment-btn" class="danger" aria-label="Delete saved moment" style="display:none;">🗑 Delete</button>
+      </div>
 
-    <label for="formation-select">Formation:</label>
-    <select id="formation-select" aria-label="Select formation"></select>
-    <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
+      <div id="custom-formation-controls" style="display:none;" role="group" aria-label="Custom formation controls">
+        <input id="save-formation-name" type="text" maxlength="50" placeholder="Formation name" aria-label="Custom formation name" />
+        <button id="save-formation-btn" aria-label="Save custom formation">💾 Save</button>
+      </div>
 
-    <span class="toolbar-sep"></span>
+      <span class="toolbar-sep"></span>
 
-    <!-- Opponent Overlay Controls -->
-    <label id="opponent-toggle-label">
-      <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
-      Opponent
-    </label>
-    <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;">
-    </select>
+      <button id="arrow-mode-btn" aria-label="Toggle arrow drawing mode" aria-pressed="false">🏹 Arrows</button>
+      <button id="clear-arrows-btn" aria-label="Clear all arrows" style="display:none;">✕ Clear</button>
+      <button id="export-btn" aria-label="Export field as PNG image">📷 Export</button>
+      <button id="reset-btn" aria-label="Reset field to formation defaults">↺ Reset</button>
+      <button id="toggle-info-btn" aria-label="Toggle position info panel" aria-pressed="false" style="opacity:0.5;">ℹ️ Info</button>
 
-    <span class="toolbar-sep"></span>
-
-    <button id="reset-btn" aria-label="Reset field to formation defaults">↺ Reset</button>
-    <button id="toggle-info-btn" aria-label="Toggle position info panel" aria-pressed="false" style="opacity:0.5;">ℹ️ Info</button>
-    <button id="export-btn" aria-label="Export field as PNG image">📷 Export</button>
-    <button id="arrow-mode-btn" aria-label="Toggle arrow drawing mode" aria-pressed="false">🏹 Arrows</button>
-    <button id="clear-arrows-btn" aria-label="Clear all arrows" style="display:none;">✕ Clear</button>
-
-    <span class="toolbar-sep"></span>
-
-    <!-- Moments selector -->
-    <select id="moments-select" aria-label="Select situational moment">
-      <option value="">— Moments —</option>
-    </select>
-
-    <!-- Moment save/delete controls -->
-    <div id="moment-controls" role="group" aria-label="Moment controls">
-      <input id="save-moment-name" type="text" maxlength="50" placeholder="Moment name" aria-label="Moment name" />
-      <button id="save-moment-btn" aria-label="Save as Moment">💾 Save</button>
-      <button id="duplicate-moment-btn" aria-label="Duplicate current moment" style="display:none;">📋 Copy</button>
-      <button id="delete-moment-btn" class="danger" aria-label="Delete saved moment" style="display:none;">🗑 Delete</button>
-    </div>
-
-    <!-- Custom formation save controls (visible in custom mode) -->
-    <div id="custom-formation-controls" style="display:none;" role="group" aria-label="Custom formation controls">
-      <input id="save-formation-name" type="text" maxlength="50" placeholder="Formation name" aria-label="Custom formation name" />
-      <button id="save-formation-btn" aria-label="Save custom formation">💾 Save</button>
+      <span id="player-count">Players: 11</span>
     </div>
   </header>
 
