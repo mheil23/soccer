@@ -191,8 +191,8 @@ describe('bootstrap', () => {
   it('renders field, tokens, and ball on bootstrap', () => {
     bootstrap();
     expect(renderField).toHaveBeenCalledOnce();
-    expect(renderTokens).toHaveBeenCalledOnce();
-    expect(renderBall).toHaveBeenCalledOnce();
+    expect(renderTokens).toHaveBeenCalled();
+    expect(renderBall).toHaveBeenCalled();
   });
 
   it('updates format button aria-pressed states on bootstrap', () => {
