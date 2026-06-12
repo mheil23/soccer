@@ -610,6 +610,13 @@
       const toggle = document.getElementById('toolbar-toggle');
       if (!toolbar || !toggle) return;
 
+      // Start collapsed on mobile
+      if (window.innerWidth <= 640) {
+        toolbar.classList.add('collapsed');
+        toggle.textContent = '▼ Menu';
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+
       toggle.addEventListener('click', () => {
         const isCollapsed = toolbar.classList.toggle('collapsed');
         toggle.textContent = isCollapsed ? '▼ Menu' : '▲';
