@@ -2022,6 +2022,8 @@ export function initArrowMode(getState, setState) {
     startIndicator = null;
   }
 
+  const deleteArrowBtn = document.getElementById('delete-arrow-btn');
+
   function selectArrow(arrowId) {
     deselectArrow();
     selectedArrowId = arrowId;
@@ -2035,6 +2037,8 @@ export function initArrowMode(getState, setState) {
         visiblePath.setAttribute('opacity', '1');
       }
     }
+    // Show delete button
+    if (deleteArrowBtn) deleteArrowBtn.style.display = '';
   }
 
   function deselectArrow() {
@@ -2050,6 +2054,23 @@ export function initArrowMode(getState, setState) {
       }
       selectedArrowId = null;
     }
+    // Hide delete button
+    if (deleteArrowBtn) deleteArrowBtn.style.display = 'none';
+  }
+
+  // Delete arrow button (for mobile — no keyboard Delete key)
+  if (deleteArrowBtn) {
+    deleteArrowBtn.addEventListener('click', () => {
+      if (!selectedArrowId) return;
+      const state = getState();
+      const newState = deleteArrow(state, selectedArrowId);
+      selectedArrowId = null;
+      setState(newState);
+      if (deleteArrowBtn) deleteArrowBtn.style.display = 'none';
+      if (clearArrowsBtn && newState.arrows.length === 0) {
+        clearArrowsBtn.style.display = 'none';
+      }
+    });
   }
 
   // Toggle arrow mode
