@@ -1649,11 +1649,12 @@ export function initMomentSaveDelete(getState, setState, momentsApi, conflictDia
       if (!confirmed) return;
 
       // Remove from state and persist
-      const newState = deleteSavedMoment(state, momentId);
-      // Clear active moment key if it was the deleted one
-      if (newState.activeMomentKey === momentId) {
-        newState.activeMomentKey = null;
-      }
+      let newState = deleteSavedMoment(state, momentId);
+
+      // Reset to current formation (clear the deleted moment from the field)
+      const defaultFormationId = `${newState.format}-${DEFAULT_FORMATION[newState.format]}`;
+      newState = applyFormation(newState, state.activeFormationKey || defaultFormationId);
+
       setState(newState);
       persistSavedMoments(newState.savedMoments);
       momentsApi.refreshMoments();
