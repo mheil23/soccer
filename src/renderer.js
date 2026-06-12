@@ -443,12 +443,12 @@ export function renderArrows(svgEl, arrows = []) {
       style: 'cursor: pointer;',
     });
 
-    // Invisible wider hit area for easier clicking
+    // Invisible wider hit area for easier clicking/tapping
     const hitArea = createSvgElement('path', {
       d: pathData,
       fill: 'none',
       stroke: 'transparent',
-      'stroke-width': '3',
+      'stroke-width': '5',
       'pointer-events': 'stroke',
     });
 
