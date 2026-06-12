@@ -2048,7 +2048,7 @@ export function initArrowMode(getState, setState) {
         const visiblePath = arrowGroup.querySelectorAll('path')[1];
         if (visiblePath) {
           visiblePath.setAttribute('stroke', '#f0c040');
-          visiblePath.setAttribute('stroke-width', '0.4');
+          visiblePath.setAttribute('stroke-width', '0.6');
           visiblePath.setAttribute('opacity', '0.85');
         }
       }
@@ -2113,6 +2113,9 @@ export function initArrowMode(getState, setState) {
 
   // Click handler on SVG for arrow drawing and selection
   svgEl.addEventListener('click', (e) => {
+    // Skip if we just finished dragging an arrow (prevent accidental new arrow start)
+    if (justDraggedArrow) return;
+
     // Check if clicking on an existing arrow (for selection)
     let el = e.target;
     while (el && el !== svgEl) {
@@ -2196,6 +2199,7 @@ export function initArrowMode(getState, setState) {
 
   // Drag handler for moving selected arrows
   let arrowDragContext = null;
+  let justDraggedArrow = false; // Prevents click from starting a new arrow after drag
 
   svgEl.addEventListener('pointerdown', (e) => {
     if (!selectedArrowId) return;
@@ -2262,6 +2266,9 @@ export function initArrowMode(getState, setState) {
   svgEl.addEventListener('pointerup', (e) => {
     if (arrowDragContext) {
       arrowDragContext = null;
+      justDraggedArrow = true;
+      // Reset the flag after a short delay (after the click event fires)
+      setTimeout(() => { justDraggedArrow = false; }, 100);
       // Re-select the arrow to restore highlight after re-render
       if (selectedArrowId) {
         setTimeout(() => selectArrow(selectedArrowId), 0);
