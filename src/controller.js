@@ -179,6 +179,13 @@ export function bootstrap() {
     formatLabel.textContent = `Format: ${format}`;
   }
 
+  // Enable opponent overlay by default
+  const oppToggle = document.getElementById('opponent-toggle');
+  if (oppToggle && !state.opponentOverlayEnabled) {
+    oppToggle.checked = true;
+    oppToggle.dispatchEvent(new Event('change'));
+  }
+
   return { getState, setState };
 }
 
