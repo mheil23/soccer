@@ -457,7 +457,7 @@ export function renderArrows(svgEl, arrows = []) {
       d: pathData,
       fill: 'none',
       stroke: '#f0c040',
-      'stroke-width': '0.6',
+      'stroke-width': '0.8',
       opacity: '0.85',
       'stroke-linecap': 'round',
       'marker-end': 'url(#arrowhead)',
