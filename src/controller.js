@@ -490,11 +490,20 @@ export function initFormatSelector(getState, setState, confirmFn = showConfirmDi
         renderField(svgEl, newFormat);
       }
 
-      // Sync opponent toggle UI (setFormat disables the overlay in state)
+      // Re-enable opponent overlay for the new format (keep it on)
       const oppToggle = document.getElementById('opponent-toggle');
       const oppSelect = document.getElementById('opponent-formation-select');
-      if (oppToggle) oppToggle.checked = false;
-      if (oppSelect) oppSelect.style.display = 'none';
+      if (oppToggle && oppToggle.checked) {
+        // Re-apply opponent overlay with default formation for the new format
+        const oppFormationKey = `${newFormat}-${DEFAULT_FORMATION[newFormat]}`;
+        const oppState = setOpponentOverlay(getState(), true, oppFormationKey);
+        setState(oppState);
+        if (oppSelect) {
+          populateOpponentSelect(oppSelect, newFormat, oppState.opponentFormationKey);
+          oppSelect.disabled = false;
+          oppSelect.style.display = '';
+        }
+      }
 
       // Refresh the formation dropdown for the new format
       const formationSelect = document.getElementById('formation-select');
