@@ -167,11 +167,9 @@ export function bootstrap() {
   initExportHandler(getState);
   initArrowMode(getState, setState);
 
-  // Update format button states to match loaded format
-  const formatButtons = document.querySelectorAll('.format-btn');
-  formatButtons.forEach((btn) => {
-    btn.setAttribute('aria-pressed', btn.dataset.format === format ? 'true' : 'false');
-  });
+  // Update format select to match loaded format
+  const formatSelect = document.getElementById('format-select');
+  if (formatSelect) formatSelect.value = format;
 
   // Update format label
   const formatLabel = document.getElementById('active-format-label');
@@ -443,140 +441,139 @@ export function showConfirmDialog(message) {
 // ─── Format Selector (Requirements 1.1, 1.2, 1.3, 1.4, 5.6) ───────────────
 
 /**
- * Initialize the format selector buttons.
- * Wires click handlers to .format-btn buttons (#btn-7v7, #btn-9v9, #btn-11v11).
+ * Initialize the format selector dropdown.
+ * Wires change handler to #format-select.
  *
  * @param {() => object} getState - Returns current app state
  * @param {(newState: object) => void} setState - Updates app state
  * @param {(message: string) => Promise<boolean>} confirmFn - Shows confirmation dialog, resolves boolean
  */
 export function initFormatSelector(getState, setState, confirmFn = showConfirmDialog) {
-  const formatButtons = document.querySelectorAll('.format-btn');
+  const select = document.getElementById('format-select');
   const formatLabel = document.getElementById('active-format-label');
   const svgEl = document.getElementById('field-svg');
 
-  formatButtons.forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const newFormat = btn.dataset.format;
-      const currentState = getState();
+  if (!select) return;
 
-      // No-op if already on this format
-      if (currentState.format === newFormat) return;
+  select.addEventListener('change', async () => {
+    const newFormat = select.value;
+    const currentState = getState();
 
-      // If custom formation mode is active and unsaved, confirm before switching
-      if (currentState.activeFormationKey === 'custom' && !currentState._customSaved) {
-        const confirmed = await confirmFn(
-          'Changing the format will discard your unsaved custom formation. Continue?'
-        );
-        if (!confirmed) return;
+    // No-op if already on this format
+    if (currentState.format === newFormat) return;
+
+    // If custom formation mode is active and unsaved, confirm before switching
+    if (currentState.activeFormationKey === 'custom' && !currentState._customSaved) {
+      const confirmed = await confirmFn(
+        'Changing the format will discard your unsaved custom formation. Continue?'
+      );
+      if (!confirmed) {
+        // Revert the select to current format
+        select.value = currentState.format;
+        return;
       }
+    }
 
-      // Apply the new format via state mutation
-      const newState = setFormat(currentState, newFormat);
-      setState(newState);
+    // Apply the new format via state mutation
+    const newState = setFormat(currentState, newFormat);
+    setState(newState);
 
-      // Update button aria-pressed states
-      formatButtons.forEach((b) => {
-        b.setAttribute('aria-pressed', b.dataset.format === newFormat ? 'true' : 'false');
-      });
+    // Update the active format label
+    if (formatLabel) {
+      formatLabel.textContent = `Format: ${newFormat}`;
+    }
 
-      // Update the active format label
-      if (formatLabel) {
-        formatLabel.textContent = `Format: ${newFormat}`;
+    // Re-render field (setState doesn't call renderField)
+    if (svgEl) {
+      renderField(svgEl, newFormat);
+    }
+
+    // Re-enable opponent overlay for the new format (keep it on)
+    const oppToggle = document.getElementById('opponent-toggle');
+    const oppSelect = document.getElementById('opponent-formation-select');
+    if (oppToggle && oppToggle.checked) {
+      // Re-apply opponent overlay with default formation for the new format
+      const oppFormationKey = `${newFormat}-${DEFAULT_FORMATION[newFormat]}`;
+      const oppState = setOpponentOverlay(getState(), true, oppFormationKey);
+      setState(oppState);
+      if (oppSelect) {
+        populateOpponentSelect(oppSelect, newFormat, oppState.opponentFormationKey);
+        oppSelect.disabled = false;
+        oppSelect.style.display = '';
       }
+    }
 
-      // Re-render field (setState doesn't call renderField)
-      if (svgEl) {
-        renderField(svgEl, newFormat);
-      }
-
-      // Re-enable opponent overlay for the new format (keep it on)
-      const oppToggle = document.getElementById('opponent-toggle');
-      const oppSelect = document.getElementById('opponent-formation-select');
-      if (oppToggle && oppToggle.checked) {
-        // Re-apply opponent overlay with default formation for the new format
-        const oppFormationKey = `${newFormat}-${DEFAULT_FORMATION[newFormat]}`;
-        const oppState = setOpponentOverlay(getState(), true, oppFormationKey);
-        setState(oppState);
-        if (oppSelect) {
-          populateOpponentSelect(oppSelect, newFormat, oppState.opponentFormationKey);
-          oppSelect.disabled = false;
-          oppSelect.style.display = '';
+    // Refresh the formation dropdown for the new format
+    const formationSelect = document.getElementById('formation-select');
+    if (formationSelect) {
+      formationSelect.innerHTML = '';
+      const formations = getFormationsForFormat(newFormat);
+      for (const f of formations) {
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.textContent = f.name;
+        if (f.id === newState.activeFormationKey) {
+          option.selected = true;
         }
+        formationSelect.appendChild(option);
       }
-
-      // Refresh the formation dropdown for the new format
-      const formationSelect = document.getElementById('formation-select');
-      if (formationSelect) {
-        formationSelect.innerHTML = '';
-        const formations = getFormationsForFormat(newFormat);
-        for (const f of formations) {
+      // Add "Saved" optgroup for user-saved custom formations
+      const customFormationsForFormat = newState.customFormations.filter((f) => f.format === newFormat);
+      if (customFormationsForFormat.length > 0) {
+        const savedGroup = document.createElement('optgroup');
+        savedGroup.label = 'Saved';
+        for (const f of customFormationsForFormat) {
           const option = document.createElement('option');
           option.value = f.id;
           option.textContent = f.name;
-          if (f.id === newState.activeFormationKey) {
-            option.selected = true;
-          }
-          formationSelect.appendChild(option);
+          savedGroup.appendChild(option);
         }
-        // Add "Saved" optgroup for user-saved custom formations
-        const customFormationsForFormat = newState.customFormations.filter((f) => f.format === newFormat);
-        if (customFormationsForFormat.length > 0) {
-          const savedGroup = document.createElement('optgroup');
-          savedGroup.label = 'Saved';
-          for (const f of customFormationsForFormat) {
-            const option = document.createElement('option');
-            option.value = f.id;
-            option.textContent = f.name;
-            savedGroup.appendChild(option);
-          }
-          formationSelect.appendChild(savedGroup);
+        formationSelect.appendChild(savedGroup);
+      }
+      const customOption = document.createElement('option');
+      customOption.value = 'custom';
+      customOption.textContent = 'Custom';
+      formationSelect.appendChild(customOption);
+    }
+
+    // Refresh the moments dropdown for the new format
+    const momentsSelect = document.getElementById('moments-select');
+    if (momentsSelect) {
+      momentsSelect.innerHTML = '';
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = '— Moments —';
+      momentsSelect.appendChild(defaultOpt);
+
+      const predefined = getPredefinedMoments(newFormat);
+      if (predefined.length > 0) {
+        const predefinedGroup = document.createElement('optgroup');
+        predefinedGroup.label = 'Predefined';
+        for (const moment of predefined) {
+          const option = document.createElement('option');
+          option.value = moment.id;
+          option.textContent = moment.name;
+          predefinedGroup.appendChild(option);
         }
-        const customOption = document.createElement('option');
-        customOption.value = 'custom';
-        customOption.textContent = 'Custom';
-        formationSelect.appendChild(customOption);
+        momentsSelect.appendChild(predefinedGroup);
       }
 
-      // Refresh the moments dropdown for the new format
-      const momentsSelect = document.getElementById('moments-select');
-      if (momentsSelect) {
-        momentsSelect.innerHTML = '';
-        const defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = '— Moments —';
-        momentsSelect.appendChild(defaultOpt);
-
-        const predefined = getPredefinedMoments(newFormat);
-        if (predefined.length > 0) {
-          const predefinedGroup = document.createElement('optgroup');
-          predefinedGroup.label = 'Predefined';
-          for (const moment of predefined) {
-            const option = document.createElement('option');
-            option.value = moment.id;
-            option.textContent = moment.name;
-            predefinedGroup.appendChild(option);
-          }
-          momentsSelect.appendChild(predefinedGroup);
+      const userMoments = newState.savedMoments.filter((m) => m.format === newFormat);
+      if (userMoments.length > 0) {
+        const userGroup = document.createElement('optgroup');
+        userGroup.label = 'Saved';
+        for (const moment of userMoments) {
+          const option = document.createElement('option');
+          option.value = moment.id;
+          option.textContent = moment.name;
+          userGroup.appendChild(option);
         }
-
-        const userMoments = newState.savedMoments.filter((m) => m.format === newFormat);
-        if (userMoments.length > 0) {
-          const userGroup = document.createElement('optgroup');
-          userGroup.label = 'Saved';
-          for (const moment of userMoments) {
-            const option = document.createElement('option');
-            option.value = moment.id;
-            option.textContent = moment.name;
-            userGroup.appendChild(option);
-          }
-          momentsSelect.appendChild(userGroup);
-        }
+        momentsSelect.appendChild(userGroup);
       }
+    }
 
-      // Persist the new format to localStorage
-      safeStorageWrite('format', newFormat);
-    });
+    // Persist the new format to localStorage
+    safeStorageWrite('format', newFormat);
   });
 }
 
@@ -1414,6 +1411,10 @@ export function initMomentsSelector(getState, setState) {
 
     // If the default "— Moments —" option was selected, clear the moment and restore formation
     if (!momentId) {
+      // Hide moment controls when no moment is selected
+      const momentControls = document.getElementById('moment-controls');
+      if (momentControls) momentControls.style.display = 'none';
+
       if (state.activeMomentKey) {
         // Re-apply the current formation to restore standard positions
         const newState = applyFormation(state, state.activeFormationKey);
@@ -1421,6 +1422,10 @@ export function initMomentsSelector(getState, setState) {
       }
       return;
     }
+
+    // Show moment controls when a moment is selected
+    const momentControls = document.getElementById('moment-controls');
+    if (momentControls) momentControls.style.display = '';
 
     // Find the moment definition — check predefined first, then user-saved
     const predefined = getPredefinedMoments(state.format);
