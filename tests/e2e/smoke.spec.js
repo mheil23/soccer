@@ -10,31 +10,21 @@ test.describe('Smoke Tests', () => {
     await expect(fieldSvg).toHaveAttribute('viewBox', '0 0 105 68');
   });
 
-  test('all three format buttons are clickable and switch active format', async ({ page }) => {
+  test('format select switches active format', async ({ page }) => {
     await page.goto('/');
 
-    // Click 7v7
-    const btn7 = page.locator('#btn-7v7');
-    await btn7.click();
-    await expect(btn7).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#btn-9v9')).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('#btn-11v11')).toHaveAttribute('aria-pressed', 'false');
+    const formatSelect = page.locator('#format-select');
+
+    // Select 7v7
+    await formatSelect.selectOption('7v7');
     await expect(page.locator('#active-format-label')).toContainText('7v7');
 
-    // Click 9v9
-    const btn9 = page.locator('#btn-9v9');
-    await btn9.click();
-    await expect(btn9).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#btn-7v7')).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('#btn-11v11')).toHaveAttribute('aria-pressed', 'false');
+    // Select 9v9
+    await formatSelect.selectOption('9v9');
     await expect(page.locator('#active-format-label')).toContainText('9v9');
 
-    // Click 11v11
-    const btn11 = page.locator('#btn-11v11');
-    await btn11.click();
-    await expect(btn11).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#btn-7v7')).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('#btn-9v9')).toHaveAttribute('aria-pressed', 'false');
+    // Select 11v11
+    await formatSelect.selectOption('11v11');
     await expect(page.locator('#active-format-label')).toContainText('11v11');
   });
 
@@ -44,7 +34,7 @@ test.describe('Smoke Tests', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    await expect(page.locator('#btn-11v11')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#format-select')).toHaveValue('11v11');
     await expect(page.locator('#active-format-label')).toContainText('11v11');
   });
 
@@ -118,8 +108,8 @@ test.describe('Smoke Tests', () => {
     await page.goto('/');
 
     // Switch to 7v7 format — this should persist to localStorage
-    await page.locator('#btn-7v7').click();
-    await expect(page.locator('#btn-7v7')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#format-select').selectOption('7v7');
+    await expect(page.locator('#format-select')).toHaveValue('7v7');
 
     // Verify localStorage was written
     const storedFormat = await page.evaluate(() => localStorage.getItem('sft.v1.format'));
@@ -129,7 +119,7 @@ test.describe('Smoke Tests', () => {
     await page.reload();
 
     // Verify the format persisted
-    await expect(page.locator('#btn-7v7')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#format-select')).toHaveValue('7v7');
     await expect(page.locator('#active-format-label')).toContainText('7v7');
   });
 });
