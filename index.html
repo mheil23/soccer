@@ -248,6 +248,21 @@
       gap: 0.4rem;
     }
 
+    #primary-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    #primary-controls.hidden {
+      display: none;
+    }
+
+    #primary-toggle {
+      display: none;
+    }
+
     /* ─── Main Layout ────────────────────────────────────────────────────── */
     #main {
       flex: 1;
@@ -434,6 +449,17 @@
         cursor: pointer;
       }
 
+      #primary-toggle {
+        display: inline-block !important;
+        padding: 0.2rem 0.5rem;
+        border: 1.5px solid #0f3460;
+        border-radius: 6px;
+        background: #1a1a2e;
+        color: #ccc;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
       #toolbar.collapsed .toolbar-row-primary > *:not(h1):not(#toolbar-toggle) {
         display: none !important;
       }
@@ -498,26 +524,29 @@
     <div class="toolbar-row toolbar-row-primary">
       <h1>⚽ Soccer Formations</h1>
       <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
+      <button id="primary-toggle" aria-label="Toggle setup panel" style="display:none;">⚙️ Setup</button>
 
-      <select id="format-select" aria-label="Game format">
-        <option value="7v7">7v7</option>
-        <option value="9v9">9v9</option>
-        <option value="11v11" selected>11v11</option>
-      </select>
+      <div id="primary-controls">
+        <select id="format-select" aria-label="Game format">
+          <option value="7v7">7v7</option>
+          <option value="9v9">9v9</option>
+          <option value="11v11" selected>11v11</option>
+        </select>
 
-      <span class="toolbar-sep"></span>
+        <span class="toolbar-sep"></span>
 
-      <label for="formation-select">Formation:</label>
-      <select id="formation-select" aria-label="Select formation"></select>
-      <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
+        <label for="formation-select">Formation:</label>
+        <select id="formation-select" aria-label="Select formation"></select>
+        <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
 
-      <span class="toolbar-sep"></span>
+        <span class="toolbar-sep"></span>
 
-      <label id="opponent-toggle-label">
-        <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
-        Opponent
-      </label>
-      <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;"></select>
+        <label id="opponent-toggle-label">
+          <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
+          Opponent
+        </label>
+        <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;"></select>
+      </div>
     </div>
 
     <div class="toolbar-row toolbar-row-secondary">
@@ -625,6 +654,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const toolbar = document.getElementById('toolbar');
       const toggle = document.getElementById('toolbar-toggle');
+      const primaryToggle = document.getElementById('primary-toggle');
+      const primaryControls = document.getElementById('primary-controls');
       if (!toolbar || !toggle) return;
 
       // Start collapsed on mobile
@@ -634,11 +665,26 @@
         toggle.setAttribute('aria-expanded', 'false');
       }
 
+      // Main toggle: show/hide entire menu
       toggle.addEventListener('click', () => {
         const isCollapsed = toolbar.classList.toggle('collapsed');
         toggle.textContent = isCollapsed ? '▼ Menu' : '▲';
         toggle.setAttribute('aria-expanded', String(!isCollapsed));
+
+        // When opening menu, keep primary controls collapsed by default
+        if (!isCollapsed && primaryControls && primaryToggle) {
+          primaryControls.classList.add('hidden');
+          primaryToggle.style.display = '';
+        }
       });
+
+      // Primary toggle: show/hide the setup section (format, formation, opponent)
+      if (primaryToggle && primaryControls) {
+        primaryToggle.addEventListener('click', () => {
+          const isHidden = primaryControls.classList.toggle('hidden');
+          primaryToggle.textContent = isHidden ? '⚙️ Setup' : '⚙️ ▲';
+        });
+      }
     });
   </script>
 
