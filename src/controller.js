@@ -124,6 +124,21 @@ export function bootstrap() {
     savedMoments: loaded.savedMoments || [],
   };
 
+  // 5b. Restore last active formation if saved
+  const savedFormation = storage.read('activeFormation');
+  if (savedFormation && savedFormation !== state.activeFormationKey) {
+    // Check if it's a custom formation
+    const customMatch = state.customFormations.find((f) => f.id === savedFormation);
+    if (customMatch) {
+      const ownTokens = customMatch.positions.map((pos, i) => ({
+        id: `own-${i}`, team: 'own', label: pos.label, nx: pos.nx, ny: pos.ny, formationKey: '',
+      }));
+      state = { ...state, activeFormationKey: customMatch.id, activeFormationName: customMatch.name, ownTokens, ball: { nx: 0.5, ny: 0.5 } };
+    } else {
+      state = applyFormation(state, savedFormation);
+    }
+  }
+
   // State accessors
   const svgEl = document.getElementById('field-svg');
   const getState = () => state;
@@ -1291,6 +1306,11 @@ export function initFormationSelector(getState, setState) {
     // Hide custom formation controls when switching to a preset
     const customControls = document.getElementById('custom-formation-controls');
     if (customControls) customControls.style.display = 'none';
+
+    // Persist active formation
+    if (newState.activeFormationKey) {
+      safeStorageWrite('activeFormation', newState.activeFormationKey);
+    }
   });
 
   // ─── Delete formation button ──────────────────────────────────────────
