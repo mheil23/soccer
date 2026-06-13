@@ -28,11 +28,11 @@ const { storage } = await import('../src/storage.js');
 
 function setupDOM() {
   document.body.innerHTML = `
-    <div role="group" aria-label="Game format">
-      <button class="format-btn" id="btn-7v7" aria-pressed="false" data-format="7v7">7v7</button>
-      <button class="format-btn" id="btn-9v9" aria-pressed="false" data-format="9v9">9v9</button>
-      <button class="format-btn" id="btn-11v11" aria-pressed="true" data-format="11v11">11v11</button>
-    </div>
+    <select id="format-select" aria-label="Game format">
+      <option value="7v7">7v7</option>
+      <option value="9v9">9v9</option>
+      <option value="11v11" selected>11v11</option>
+    </select>
     <span id="active-format-label">Format: 11v11</span>
     <svg id="field-svg" viewBox="0 0 68 105">
       <g id="field-markings"></g>
@@ -67,27 +67,29 @@ describe('initFormatSelector', () => {
     };
   });
 
-  it('renders three format buttons that are clickable', () => {
+  it('renders a format select dropdown with three options', () => {
     initFormatSelector(getState, setState);
-    const buttons = document.querySelectorAll('.format-btn');
-    expect(buttons).toHaveLength(3);
+    const select = document.getElementById('format-select');
+    expect(select).not.toBeNull();
+    expect(select.options).toHaveLength(3);
   });
 
-  it('highlights the active format button with aria-pressed="true"', async () => {
+  it('changes format when select value changes', async () => {
     initFormatSelector(getState, setState);
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(btn7.getAttribute('aria-pressed')).toBe('true');
-    expect(document.getElementById('btn-9v9').getAttribute('aria-pressed')).toBe('false');
-    expect(document.getElementById('btn-11v11').getAttribute('aria-pressed')).toBe('false');
+    expect(state.format).toBe('7v7');
+    expect(state.ownTokens).toHaveLength(7);
   });
 
-  it('calls setFormat and updates state when a format button is clicked', async () => {
+  it('calls setFormat and updates state when format is changed', async () => {
     initFormatSelector(getState, setState);
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(state.format).toBe('7v7');
@@ -96,8 +98,9 @@ describe('initFormatSelector', () => {
 
   it('updates the active format label text', async () => {
     initFormatSelector(getState, setState);
-    const btn9 = document.getElementById('btn-9v9');
-    btn9.click();
+    const select = document.getElementById('format-select');
+    select.value = '9v9';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     const label = document.getElementById('active-format-label');
@@ -106,8 +109,9 @@ describe('initFormatSelector', () => {
 
   it('re-renders field, tokens, and ball after format change', async () => {
     initFormatSelector(getState, setState);
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(renderField).toHaveBeenCalledOnce();
@@ -117,8 +121,9 @@ describe('initFormatSelector', () => {
 
   it('persists the new format via storage.write', async () => {
     initFormatSelector(getState, setState);
-    const btn9 = document.getElementById('btn-9v9');
-    btn9.click();
+    const select = document.getElementById('format-select');
+    select.value = '9v9';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(storage.write).toHaveBeenCalledWith('format', '9v9');
@@ -128,18 +133,20 @@ describe('initFormatSelector', () => {
     // Start with opponent overlay enabled
     state = { ...state, opponentOverlayEnabled: true, opponentTokens: [{ id: 'opp-0' }] };
     initFormatSelector(getState, setState);
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(state.opponentOverlayEnabled).toBe(false);
     expect(state.opponentTokens).toHaveLength(0);
   });
 
-  it('is a no-op if clicking the already active format', async () => {
+  it('is a no-op if selecting the already active format', async () => {
     initFormatSelector(getState, setState);
-    const btn11 = document.getElementById('btn-11v11');
-    btn11.click();
+    const select = document.getElementById('format-select');
+    select.value = '11v11';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     // No re-render should have happened
@@ -151,8 +158,9 @@ describe('initFormatSelector', () => {
     const confirmFn = vi.fn().mockResolvedValue(true);
     initFormatSelector(getState, setState, confirmFn);
 
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(confirmFn).toHaveBeenCalledWith(
@@ -166,8 +174,9 @@ describe('initFormatSelector', () => {
     const confirmFn = vi.fn().mockResolvedValue(false);
     initFormatSelector(getState, setState, confirmFn);
 
-    const btn7 = document.getElementById('btn-7v7');
-    btn7.click();
+    const select = document.getElementById('format-select');
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
 
     expect(state.format).toBe('11v11');
@@ -176,23 +185,27 @@ describe('initFormatSelector', () => {
 
   it('applies the correct default formation for each format', async () => {
     initFormatSelector(getState, setState);
+    const select = document.getElementById('format-select');
 
     // Switch to 7v7
-    document.getElementById('btn-7v7').click();
+    select.value = '7v7';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
     expect(state.format).toBe('7v7');
     expect(state.ownTokens).toHaveLength(7);
     expect(state.activeFormationName).toBe('2-3-1');
 
     // Switch to 9v9
-    document.getElementById('btn-9v9').click();
+    select.value = '9v9';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
     expect(state.format).toBe('9v9');
     expect(state.ownTokens).toHaveLength(9);
     expect(state.activeFormationName).toBe('3-3-2');
 
     // Switch to 11v11
-    document.getElementById('btn-11v11').click();
+    select.value = '11v11';
+    select.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 0));
     expect(state.format).toBe('11v11');
     expect(state.ownTokens).toHaveLength(11);
@@ -750,11 +763,11 @@ describe('initFormationSelector', () => {
     state = createState('11v11');
 
     document.body.innerHTML = `
-      <div role="group" aria-label="Game format">
-        <button class="format-btn" id="btn-7v7" aria-pressed="false" data-format="7v7">7v7</button>
-        <button class="format-btn" id="btn-9v9" aria-pressed="false" data-format="9v9">9v9</button>
-        <button class="format-btn" id="btn-11v11" aria-pressed="true" data-format="11v11">11v11</button>
-      </div>
+      <select id="format-select" aria-label="Game format">
+        <option value="7v7">7v7</option>
+        <option value="9v9">9v9</option>
+        <option value="11v11" selected>11v11</option>
+      </select>
       <span id="active-format-label">Format: 11v11</span>
       <select id="formation-select" aria-label="Select formation"></select>
       <span id="active-formation-label" aria-live="polite">No formation selected</span>
