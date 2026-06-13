@@ -101,7 +101,6 @@
     }
 
     /* ─── Shared control styles ──────────────────────────────────────────── */
-    .format-btn,
     #toolbar button {
       padding: 0.35rem 0.8rem;
       border: 1.5px solid #0f3460;
@@ -114,18 +113,10 @@
       white-space: nowrap;
     }
 
-    .format-btn:hover,
     #toolbar button:hover {
       background: #0f3460;
       color: #fff;
       border-color: #1a4a8a;
-    }
-
-    .format-btn[aria-pressed="true"] {
-      background: #1E6FE8;
-      border-color: #1E6FE8;
-      color: #fff;
-      font-weight: 700;
     }
 
     #toolbar button.danger {
@@ -508,11 +499,11 @@
       <h1>⚽ Soccer Formations</h1>
       <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
 
-      <div role="group" aria-label="Game format" class="format-group">
-        <button class="format-btn" id="btn-7v7"   aria-pressed="false" data-format="7v7">7v7</button>
-        <button class="format-btn" id="btn-9v9"   aria-pressed="false" data-format="9v9">9v9</button>
-        <button class="format-btn" id="btn-11v11" aria-pressed="true"  data-format="11v11">11v11</button>
-      </div>
+      <select id="format-select" aria-label="Game format">
+        <option value="7v7">7v7</option>
+        <option value="9v9">9v9</option>
+        <option value="11v11" selected>11v11</option>
+      </select>
 
       <span class="toolbar-sep"></span>
 
@@ -534,7 +525,7 @@
         <option value="">— Moments —</option>
       </select>
 
-      <div id="moment-controls" role="group" aria-label="Moment controls">
+      <div id="moment-controls" role="group" aria-label="Moment controls" style="display:none;">
         <input id="save-moment-name" type="text" maxlength="50" placeholder="Moment name" aria-label="Moment name" />
         <button id="save-moment-btn" aria-label="Save as Moment">💾 Save</button>
         <button id="duplicate-moment-btn" aria-label="Duplicate current moment" style="display:none;">📋 Copy</button>
