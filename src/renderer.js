@@ -261,15 +261,31 @@ const OWN_FILL = '#1E6FE8';
 const OPP_FILL = '#E81E1E';
 
 /**
+ * Get the size scale factor for the given format.
+ * 11v11 = 1.0 (base), 9v9 = 1.1, 7v7 = 1.2
+ * @param {string} [format]
+ * @returns {number}
+ */
+function getSizeScale(format) {
+  if (format === '7v7') return 1.2;
+  if (format === '9v9') return 1.1;
+  return 1.0;
+}
+
+/**
  * Render position tokens into the SVG field using minimal DOM patching.
  * Creates/updates/removes <g> elements each containing a <circle> and <text>.
  * @param {SVGSVGElement} svgEl - The root SVG element
  * @param {Array<{id: string, label: string, nx: number, ny: number}>} ownTokens
  * @param {Array<{id: string, label: string, nx: number, ny: number}>} opponentTokens
  */
-export function renderTokens(svgEl, ownTokens = [], opponentTokens = []) {
+export function renderTokens(svgEl, ownTokens = [], opponentTokens = [], format) {
   const layer = svgEl.querySelector('#tokens-layer');
   if (!layer) return;
+
+  const scale = getSizeScale(format);
+  const radius = TOKEN_RADIUS * scale;
+  const fontSize = 2.2 * scale;
 
   // Build a map of desired tokens with their fill color
   const desired = new Map();
@@ -307,16 +323,18 @@ export function renderTokens(svgEl, ownTokens = [], opponentTokens = []) {
       const g = existing.get(id);
       g.setAttribute('transform', transformValue);
 
-      // Update circle fill (in case team changed, though unlikely)
+      // Update circle fill and radius
       const circle = g.querySelector('circle');
       if (circle) {
         circle.setAttribute('fill', token.fill);
+        circle.setAttribute('r', String(radius));
       }
 
-      // Update text content
+      // Update text content and size
       const text = g.querySelector('text');
       if (text) {
         text.textContent = token.label;
+        text.setAttribute('font-size', String(fontSize));
       }
     } else {
       // Create new token group
@@ -326,7 +344,7 @@ export function renderTokens(svgEl, ownTokens = [], opponentTokens = []) {
       });
 
       const circle = createSvgElement('circle', {
-        r: String(TOKEN_RADIUS),
+        r: String(radius),
         fill: token.fill,
         stroke: '#fff',
         'stroke-width': '0.3',
@@ -336,7 +354,7 @@ export function renderTokens(svgEl, ownTokens = [], opponentTokens = []) {
         'text-anchor': 'middle',
         'dominant-baseline': 'central',
         fill: '#fff',
-        'font-size': '2.2',
+        'font-size': String(fontSize),
         'font-family': 'system-ui, sans-serif',
         'pointer-events': 'none',
       });
@@ -360,17 +378,22 @@ const BALL_RADIUS = 1.8;
  * @param {SVGSVGElement} svgEl - The root SVG element
  * @param {{ nx: number, ny: number }} ball - Ball normalized position
  */
-export function renderBall(svgEl, ball) {
+export function renderBall(svgEl, ball, format) {
   const layer = svgEl.querySelector('#ball-layer');
   if (!layer) return;
+
+  const scale = getSizeScale(format);
+  const ballSize = BALL_RADIUS * scale;
 
   const cx = ball.nx * FIELD_WIDTH;
   const cy = ball.ny * FIELD_HEIGHT;
 
   let ballGroup = layer.querySelector('#ball');
   if (ballGroup) {
-    // Update position only
+    // Update position and size
     ballGroup.setAttribute('transform', `translate(${cx}, ${cy})`);
+    const emojiEl = ballGroup.querySelector('text');
+    if (emojiEl) emojiEl.setAttribute('font-size', String(ballSize * 2.4));
   } else {
     // Create soccer ball group using emoji
     ballGroup = createSvgElement('g', {
@@ -383,7 +406,7 @@ export function renderBall(svgEl, ball) {
       y: '0',
       'text-anchor': 'middle',
       'dominant-baseline': 'central',
-      'font-size': String(BALL_RADIUS * 2.4),
+      'font-size': String(ballSize * 2.4),
       'pointer-events': 'auto',
       style: 'user-select: none;',
     });
