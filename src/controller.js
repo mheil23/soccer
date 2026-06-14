@@ -146,8 +146,8 @@ export function bootstrap() {
     state = newState;
     // Re-render on every state change (rendering cycle: state mutation → renderer patch)
     if (svgEl) {
-      renderTokens(svgEl, state.ownTokens, state.opponentTokens);
-      renderBall(svgEl, state.ball);
+      renderTokens(svgEl, state.ownTokens, state.opponentTokens, state.format);
+      renderBall(svgEl, state.ball, state.format);
       renderArrows(svgEl, state.arrows);
     }
     // Update player count indicator
@@ -158,8 +158,8 @@ export function bootstrap() {
   // 6. Initial render
   if (svgEl) {
     renderField(svgEl, format);
-    renderTokens(svgEl, state.ownTokens, state.opponentTokens);
-    renderBall(svgEl, state.ball);
+    renderTokens(svgEl, state.ownTokens, state.opponentTokens, format);
+    renderBall(svgEl, state.ball, format);
     renderArrows(svgEl, state.arrows);
   }
 
@@ -1058,7 +1058,8 @@ function showLabelEditor(tokenId, getState, setState, inputEl, svgEl) {
 
     // Re-render tokens
     if (svgEl) {
-      renderTokens(svgEl, newState.ownTokens, newState.opponentTokens);
+      const currentState = getState();
+      renderTokens(svgEl, newState.ownTokens, newState.opponentTokens, currentState.format);
     }
   }
 
