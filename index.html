@@ -1,528 +1,693 @@
-/**
- * renderer.js — SVG field renderer (MVC: View)
- * Reads state and updates the SVG DOM.
- * Never mutates state directly.
- * Performs minimal DOM patching to keep the render path fast.
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Soccer Formations Tool</title>
+  <style>
+    /* ─── Reset & Base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-// ─── Coordinate Conversion Utilities ────────────────────────────────────────
-
-/**
- * Convert normalized [0,1] coordinates to pixel coordinates
- * relative to the given field rectangle.
- * @param {number} nx - Normalized x [0,1]
- * @param {number} ny - Normalized y [0,1]
- * @param {{ width: number, height: number }} fieldRect
- * @returns {{ x: number, y: number }}
- */
-export function toPixel(nx, ny, fieldRect) {
-  return {
-    x: nx * fieldRect.width,
-    y: ny * fieldRect.height,
-  };
-}
-
-/**
- * Convert pixel coordinates to normalized [0,1] coordinates,
- * clamped to the valid range. This is the single choke-point
- * for out-of-bounds enforcement.
- * @param {number} px - Pixel x
- * @param {number} py - Pixel y
- * @param {{ width: number, height: number }} fieldRect
- * @returns {{ nx: number, ny: number }}
- */
-export function toNormalized(px, py, fieldRect) {
-  return {
-    nx: Math.max(0, Math.min(1, px / fieldRect.width)),
-    ny: Math.max(0, Math.min(1, py / fieldRect.height)),
-  };
-}
-
-// ─── Field Rendering ────────────────────────────────────────────────────────
-
-/**
- * Render static pitch markings into the SVG field.
- * Uses viewBox="0 0 68 105" coordinate space (portrait orientation, meters).
- * Opponent's goal at top (y=0), own goal at bottom (y=105).
- * Targets the #field-markings group inside the SVG element.
- * @param {SVGSVGElement} svgEl - The root SVG element
- * @param {string} [format] - Game format ('7v7', '9v9', '11v11') for format-specific markings
- */
-export function renderField(svgEl, format) {
-  const group = svgEl.querySelector('#field-markings');
-  if (!group) return;
-
-  // Clear any existing markings
-  group.innerHTML = '';
-
-  // Background (grass green base)
-  const bg = createSvgElement('rect', {
-    x: '0', y: '0', width: '68', height: '105',
-    fill: '#4CAF50',
-  });
-  group.appendChild(bg);
-
-  // Grass stripes (alternating light/dark bands, horizontal)
-  const stripeCount = 10;
-  const stripeHeight = 105 / stripeCount;
-  for (let i = 0; i < stripeCount; i++) {
-    if (i % 2 === 0) continue; // skip even stripes (they're the base color)
-    const stripe = createSvgElement('rect', {
-      x: '0',
-      y: String(i * stripeHeight),
-      width: '68',
-      height: String(stripeHeight),
-      fill: '#45a049',
-      opacity: '0.3',
-    });
-    group.appendChild(stripe);
-  }
-
-  // Directional indicator — "ATTACK ▲" at top edge
-  const attackLabel = createSvgElement('text', {
-    x: '34',
-    y: '2.5',
-    'text-anchor': 'middle',
-    'font-size': '2',
-    'font-family': 'system-ui, sans-serif',
-    fill: '#ffffff',
-    opacity: '0.35',
-    'pointer-events': 'none',
-  });
-  attackLabel.textContent = '▲ ATTACK';
-  group.appendChild(attackLabel);
-
-  // Outer pitch boundary
-  const boundary = createSvgElement('rect', {
-    x: '0', y: '0', width: '68', height: '105',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(boundary);
-
-  // Halfway line (horizontal, at y=52.5)
-  const halfwayLine = createSvgElement('line', {
-    x1: '0', y1: '52.5', x2: '68', y2: '52.5',
-    stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(halfwayLine);
-
-  // Center circle (radius 9.15m)
-  const centerCircle = createSvgElement('circle', {
-    cx: '34', cy: '52.5', r: '9.15',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(centerCircle);
-
-  // Center spot
-  const centerSpot = createSvgElement('circle', {
-    cx: '34', cy: '52.5', r: '0.3',
-    fill: '#fff',
-  });
-  group.appendChild(centerSpot);
-
-  // Top penalty area (opponent's end, 16.5m deep, 40.32m wide centered)
-  const topPenaltyArea = createSvgElement('rect', {
-    x: '13.84', y: '0', width: '40.32', height: '16.5',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(topPenaltyArea);
-
-  // Bottom penalty area (own end)
-  const bottomPenaltyArea = createSvgElement('rect', {
-    x: '13.84', y: '88.5', width: '40.32', height: '16.5',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(bottomPenaltyArea);
-
-  // Top goal area (5.5m deep, 18.32m wide centered)
-  const topGoalArea = createSvgElement('rect', {
-    x: '24.84', y: '0', width: '18.32', height: '5.5',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(topGoalArea);
-
-  // Bottom goal area
-  const bottomGoalArea = createSvgElement('rect', {
-    x: '24.84', y: '99.5', width: '18.32', height: '5.5',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(bottomGoalArea);
-
-  // Top goal (opponent's — 7.32m wide centered, 2m deep behind end line)
-  const topGoal = createSvgElement('rect', {
-    x: '30.34', y: '-2', width: '7.32', height: '2',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(topGoal);
-
-  // Bottom goal (own)
-  const bottomGoal = createSvgElement('rect', {
-    x: '30.34', y: '105', width: '7.32', height: '2',
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(bottomGoal);
-
-  // Penalty spots (11m from goal line = y=11 for top, y=94 for bottom)
-  const topPenaltySpot = createSvgElement('circle', {
-    cx: '34', cy: '11', r: '0.3',
-    fill: '#fff',
-  });
-  group.appendChild(topPenaltySpot);
-
-  const bottomPenaltySpot = createSvgElement('circle', {
-    cx: '34', cy: '94', r: '0.3',
-    fill: '#fff',
-  });
-  group.appendChild(bottomPenaltySpot);
-
-  // Penalty arcs (the "D" — arc of radius 9.15m from penalty spot, outside the penalty area)
-  // Top: arc centered at (34, 11), radius 9.15, only the portion below y=16.5
-  const topArcPath = createSvgElement('path', {
-    d: `M ${34 - 9.15 * Math.sin(Math.acos(5.5 / 9.15))},16.5 A 9.15,9.15 0 0,0 ${34 + 9.15 * Math.sin(Math.acos(5.5 / 9.15))},16.5`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(topArcPath);
-
-  // Bottom: arc centered at (34, 94), radius 9.15, only the portion above y=88.5
-  const bottomArcPath = createSvgElement('path', {
-    d: `M ${34 - 9.15 * Math.sin(Math.acos(5.5 / 9.15))},88.5 A 9.15,9.15 0 0,1 ${34 + 9.15 * Math.sin(Math.acos(5.5 / 9.15))},88.5`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  });
-  group.appendChild(bottomArcPath);
-
-  // Corner arcs (quarter circles, radius 1.5m at each corner, curving inward)
-  const cornerRadius = 1.5;
-  // Top-left corner: arc from (cornerRadius, 0) to (0, cornerRadius) curving inward
-  group.appendChild(createSvgElement('path', {
-    d: `M ${cornerRadius},0 A ${cornerRadius},${cornerRadius} 0 0,1 0,${cornerRadius}`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  }));
-  // Top-right corner: arc from (68-cornerRadius, 0) to (68, cornerRadius) curving inward
-  group.appendChild(createSvgElement('path', {
-    d: `M ${68 - cornerRadius},0 A ${cornerRadius},${cornerRadius} 0 0,0 68,${cornerRadius}`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  }));
-  // Bottom-left corner: arc from (cornerRadius, 105) to (0, 105-cornerRadius) curving inward
-  group.appendChild(createSvgElement('path', {
-    d: `M ${cornerRadius},105 A ${cornerRadius},${cornerRadius} 0 0,0 0,${105 - cornerRadius}`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  }));
-  // Bottom-right corner: arc from (68-cornerRadius, 105) to (68, 105-cornerRadius) curving inward
-  group.appendChild(createSvgElement('path', {
-    d: `M ${68 - cornerRadius},105 A ${cornerRadius},${cornerRadius} 0 0,1 68,${105 - cornerRadius}`,
-    fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
-  }));
-
-  // Build-out line for 7v7 (dashed line between penalty area and halfway line)
-  // Positioned at y = (16.5 + 52.5) / 2 = 34.5 for top half, y = (88.5 + 52.5) / 2 = 70.5 for bottom half
-  if (format === '7v7') {
-    const topBuildOut = createSvgElement('line', {
-      x1: '0', y1: '34.5', x2: '68', y2: '34.5',
-      stroke: '#fff', 'stroke-width': '0.3',
-      'stroke-dasharray': '2,1.5',
-    });
-    group.appendChild(topBuildOut);
-
-    const bottomBuildOut = createSvgElement('line', {
-      x1: '0', y1: '70.5', x2: '68', y2: '70.5',
-      stroke: '#fff', 'stroke-width': '0.3',
-      'stroke-dasharray': '2,1.5',
-    });
-    group.appendChild(bottomBuildOut);
-  }
-}
-
-// ─── SVG Helpers ────────────────────────────────────────────────────────────
-
-/**
- * Create an SVG element with the given tag and attributes.
- * @param {string} tag
- * @param {Record<string, string>} attrs
- * @returns {SVGElement}
- */
-function createSvgElement(tag, attrs = {}) {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    el.setAttribute(key, value);
-  }
-  return el;
-}
-
-// ─── Token Rendering ────────────────────────────────────────────────────────
-
-// ViewBox dimensions (meters) — portrait orientation
-const FIELD_WIDTH = 68;
-const FIELD_HEIGHT = 105;
-const TOKEN_RADIUS = 3;
-
-const OWN_FILL = '#1E6FE8';
-const OPP_FILL = '#E81E1E';
-
-/**
- * Get the size scale factor for the given format.
- * 11v11 = 1.0 (base), 9v9 = 1.1, 7v7 = 1.2
- * @param {string} [format]
- * @returns {number}
- */
-function getSizeScale(format) {
-  if (format === '7v7') return 1.2;
-  if (format === '9v9') return 1.1;
-  return 1.0;
-}
-
-/**
- * Render position tokens into the SVG field using minimal DOM patching.
- * Creates/updates/removes <g> elements each containing a <circle> and <text>.
- * @param {SVGSVGElement} svgEl - The root SVG element
- * @param {Array<{id: string, label: string, nx: number, ny: number}>} ownTokens
- * @param {Array<{id: string, label: string, nx: number, ny: number}>} opponentTokens
- */
-export function renderTokens(svgEl, ownTokens = [], opponentTokens = [], format) {
-  const layer = svgEl.querySelector('#tokens-layer');
-  if (!layer) return;
-
-  const scale = getSizeScale(format);
-  const radius = TOKEN_RADIUS * scale;
-  const fontSize = 2.2 * scale;
-
-  // Build a map of desired tokens with their fill color
-  const desired = new Map();
-  for (const token of ownTokens) {
-    desired.set(token.id, { ...token, fill: OWN_FILL });
-  }
-  for (const token of opponentTokens) {
-    desired.set(token.id, { ...token, fill: OPP_FILL });
-  }
-
-  // Track existing token group elements by id
-  const existing = new Map();
-  for (const child of Array.from(layer.children)) {
-    const id = child.getAttribute('id');
-    if (id) {
-      existing.set(id, child);
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #f0f0f0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-  }
 
-  // Remove stale tokens (present in DOM but not in desired)
-  for (const [id, el] of existing) {
-    if (!desired.has(id)) {
-      layer.removeChild(el);
+    /* ─── Notification Banner ────────────────────────────────────────────── */
+    #notification-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
     }
-  }
 
-  // Create or update tokens
-  for (const [id, token] of desired) {
-    const px = token.nx * FIELD_WIDTH;
-    const py = token.ny * FIELD_HEIGHT;
-    const transformValue = `translate(${px}, ${py})`;
+    .notification {
+      background: #c0392b;
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+      text-align: center;
+      pointer-events: auto;
+      animation: slideDown 0.2s ease-out;
+    }
 
-    if (existing.has(id)) {
-      // Update existing node
-      const g = existing.get(id);
-      g.setAttribute('transform', transformValue);
+    .notification.info  { background: #2980b9; }
+    .notification.warn  { background: #e67e22; }
+    .notification.error { background: #c0392b; }
 
-      // Update circle fill and radius
-      const circle = g.querySelector('circle');
-      if (circle) {
-        circle.setAttribute('fill', token.fill);
-        circle.setAttribute('r', String(radius));
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
+    }
+
+    /* ─── Format Toolbar ─────────────────────────────────────────────────── */
+    #toolbar {
+      display: flex;
+      flex-direction: column;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-row-primary {
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .toolbar-row-secondary {
+      padding: 0.35rem 1rem;
+      background: #131d36;
+    }
+
+    #toolbar h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-right: auto;
+    }
+
+    /* Hidden on desktop, shown via mobile media query */
+    #toolbar-toggle {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #toolbar-toggle:hover {
+      background: #0f3460;
+      color: #fff;
+    }
+
+    #primary-toggle {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #primary-toggle:hover {
+      background: #0f3460;
+      color: #fff;
+    }
+
+    /* ─── Collapsed toolbar states ───────────────────────────────────────── */
+    #toolbar.collapsed .toolbar-row-secondary {
+      display: none !important;
+    }
+
+    #toolbar.collapsed #primary-controls {
+      display: none !important;
+    }
+
+    #toolbar.collapsed #primary-toggle {
+      display: none !important;
+    }
+
+    #toolbar.collapsed .toolbar-row-primary {
+      border-bottom: none;
+    }
+
+    #player-count {
+      font-size: 0.75rem;
+      color: #666;
+      margin-left: auto;
+    }
+
+    /* Vertical separator between control groups */
+    .toolbar-sep {
+      width: 1px;
+      height: 1.6rem;
+      background: #0f3460;
+      margin: 0 0.25rem;
+    }
+
+    /* ─── Shared control styles ──────────────────────────────────────────── */
+    #toolbar button {
+      padding: 0.35rem 0.8rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    #toolbar button:hover {
+      background: #0f3460;
+      color: #fff;
+      border-color: #1a4a8a;
+    }
+
+    #toolbar button.danger {
+      color: #e74c3c;
+      border-color: #5a1a1a;
+    }
+    #toolbar button.danger:hover {
+      background: #5a1a1a;
+      color: #ff6b6b;
+      border-color: #e74c3c;
+    }
+
+    /* ─── Select dropdowns ───────────────────────────────────────────────── */
+    #toolbar select {
+      padding: 0.35rem 0.6rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #ccc;
+      font-size: 0.85rem;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      padding-right: 1.6rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    #toolbar select:hover {
+      border-color: #1a4a8a;
+      background-color: #0f3460;
+    }
+
+    #toolbar select:focus {
+      outline: none;
+      border-color: #1E6FE8;
+      box-shadow: 0 0 0 2px rgba(30, 111, 232, 0.2);
+    }
+
+    #toolbar select:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ─── Text inputs ────────────────────────────────────────────────────── */
+    #toolbar input[type="text"] {
+      padding: 0.35rem 0.6rem;
+      border: 1.5px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 0.85rem;
+      transition: border-color 0.15s;
+      width: 160px;
+    }
+
+    #toolbar input[type="text"]:focus {
+      outline: none;
+      border-color: #1E6FE8;
+      box-shadow: 0 0 0 2px rgba(30, 111, 232, 0.2);
+    }
+
+    #toolbar input[type="text"]::placeholder {
+      color: #666;
+    }
+
+    /* ─── Toggle switch (replaces checkbox) ──────────────────────────────── */
+    #opponent-toggle-label {
+      font-size: 0.85rem;
+      color: #ccc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      user-select: none;
+    }
+
+    #opponent-toggle {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 2.2rem;
+      height: 1.2rem;
+      background: #0f3460;
+      border-radius: 0.6rem;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1.5px solid #1a4a8a;
+    }
+
+    #opponent-toggle::after {
+      content: '';
+      position: absolute;
+      width: 0.85rem;
+      height: 0.85rem;
+      background: #888;
+      border-radius: 50%;
+      top: 50%;
+      left: 2px;
+      transform: translateY(-50%);
+      transition: left 0.2s, background 0.2s;
+    }
+
+    #opponent-toggle:checked {
+      background: #1E6FE8;
+      border-color: #1E6FE8;
+    }
+
+    #opponent-toggle:checked::after {
+      left: calc(100% - 0.85rem - 2px);
+      background: #fff;
+    }
+
+    /* ─── Labels ─────────────────────────────────────────────────────────── */
+    #toolbar label[for] {
+      font-size: 0.8rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── Control groups ─────────────────────────────────────────────────── */
+    #moment-controls,
+    #custom-formation-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    #primary-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    #primary-controls.hidden {
+      display: none;
+    }
+
+    /* ─── Main Layout ────────────────────────────────────────────────────── */
+    #main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─── Field Container ────────────────────────────────────────────────── */
+    #field-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      min-width: 0;
+    }
+
+    #field-svg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      /* Keep the 68:105 aspect ratio (portrait) */
+      aspect-ratio: 68 / 105;
+      object-fit: contain;
+      display: block;
+      touch-action: none; /* prevent scroll interference with pointer events */
+    }
+
+    /* ─── Position Description Panel ────────────────────────────────────── */
+    #description-panel {
+      width: 38%;
+      max-width: 38vw;
+      min-width: 240px;
+      background: #16213e;
+      border-left: 1px solid #0f3460;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: none; /* hidden until a token is selected */
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    #description-panel.visible {
+      display: flex;
+    }
+
+    #description-panel h2 {
+      font-size: 1.1rem;
+      color: #e0e0e0;
+    }
+
+    #description-panel .role-desc {
+      font-size: 0.9rem;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    #description-panel .attributes-list {
+      list-style: disc;
+      padding-left: 1.25rem;
+      font-size: 0.85rem;
+      color: #bbb;
+    }
+
+    #description-panel .responsibilities {
+      font-size: 0.9rem;
+      color: #ccc;
+      line-height: 1.5;
+    }
+
+    #description-panel .no-desc {
+      font-size: 0.9rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    #dismiss-panel-btn {
+      align-self: flex-end;
+      padding: 0.3rem 0.75rem;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      background: transparent;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+
+    #dismiss-panel-btn:hover { background: #0f3460; }
+
+    /* ─── Token Animation ────────────────────────────────────────────────── */
+    #tokens-layer g {
+      transition: transform 0.3s ease-out;
+    }
+
+    #tokens-layer g.dragging {
+      transition: none; /* disable animation during drag for responsiveness */
+    }
+
+    /* ─── Drag Visual Feedback ───────────────────────────────────────────── */
+    #tokens-layer g.dragging circle {
+      filter: drop-shadow(0 0 2px rgba(255,255,255,0.8));
+      stroke-width: 0.6;
+    }
+
+    /* ─── Confirmation Dialog ────────────────────────────────────────────── */
+    #confirm-dialog {
+      border: none;
+      border-radius: 8px;
+      background: #16213e;
+      color: #f0f0f0;
+      padding: 1.5rem;
+      max-width: 420px;
+      width: 90vw;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    #confirm-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    #confirm-dialog h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    #confirm-dialog p {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .btn-confirm {
+      padding: 0.45rem 1rem;
+      background: #1E6FE8;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+
+    .btn-confirm:hover { background: #1658c0; }
+
+    .btn-cancel {
+      padding: 0.45rem 1rem;
+      background: transparent;
+      color: #ccc;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+
+    .btn-cancel:hover { background: #0f3460; }
+
+    /* ─── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      /* Prevent iOS Safari auto-zoom on input focus */
+      input[type="text"],
+      select {
+        font-size: 16px !important;
       }
 
-      // Update text content and size
-      const text = g.querySelector('text');
-      if (text) {
-        text.textContent = token.label;
-        text.setAttribute('font-size', String(fontSize));
+      #toolbar {
+        gap: 0;
+        max-height: 40vh;
+        overflow-y: auto;
       }
-    } else {
-      // Create new token group
-      const g = createSvgElement('g', {
-        id: id,
-        transform: transformValue,
-      });
 
-      const circle = createSvgElement('circle', {
-        r: String(radius),
-        fill: token.fill,
-        stroke: '#fff',
-        'stroke-width': '0.3',
-      });
+      .toolbar-row {
+        padding: 0.35rem 0.5rem;
+        gap: 0.3rem;
+      }
 
-      const text = createSvgElement('text', {
-        'text-anchor': 'middle',
-        'dominant-baseline': 'central',
-        fill: '#fff',
-        'font-size': String(fontSize),
-        'font-family': 'system-ui, sans-serif',
-        'pointer-events': 'none',
-      });
-      text.textContent = token.label;
+      #main {
+        flex-direction: column;
+        overflow-y: auto;
+      }
 
-      g.appendChild(circle);
-      g.appendChild(text);
-      layer.appendChild(g);
+      #field-container {
+        padding: 0.25rem;
+        min-height: 0;
+      }
+
+      #field-svg {
+        max-height: none;
+        width: 100%;
+        height: auto;
+      }
+
+      #description-panel {
+        position: absolute;
+        top: 0; right: 0; bottom: 0;
+        max-width: 80vw;
+        width: 80vw;
+        z-index: 100;
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+      }
+
+      .toolbar-sep {
+        display: none;
+      }
     }
-  }
-}
+  </style>
+</head>
+<body>
 
-// ─── Ball Rendering ─────────────────────────────────────────────────────────
+  <!-- Notification banner: queued storage/error messages, auto-dismiss after 5s -->
+  <div id="notification-banner" role="status" aria-live="polite" aria-atomic="false"></div>
 
-const BALL_RADIUS = 1.8;
+  <!-- Format-selector toolbar -->
+  <header id="toolbar">
+    <div class="toolbar-row toolbar-row-primary">
+      <h1>⚽ Soccer Formations</h1>
+      <button id="toolbar-toggle" aria-label="Toggle toolbar" aria-expanded="true">▲</button>
+      <button id="primary-toggle" aria-label="Toggle setup panel">⚙️ Setup</button>
 
-/**
- * Render the ball as the ⚽ emoji in SVG, matching the header icon.
- * Uses a <text> element with the emoji character, sized to match BALL_RADIUS.
- * The group uses a `transform` to position, making updates a single attribute write.
- * @param {SVGSVGElement} svgEl - The root SVG element
- * @param {{ nx: number, ny: number }} ball - Ball normalized position
- */
-export function renderBall(svgEl, ball, format) {
-  const layer = svgEl.querySelector('#ball-layer');
-  if (!layer) return;
+      <div id="primary-controls" class="hidden">
+        <select id="format-select" aria-label="Game format">
+          <option value="7v7">7v7</option>
+          <option value="9v9">9v9</option>
+          <option value="11v11" selected>11v11</option>
+        </select>
 
-  const scale = getSizeScale(format);
-  const ballSize = BALL_RADIUS * scale;
+        <span class="toolbar-sep"></span>
 
-  const cx = ball.nx * FIELD_WIDTH;
-  const cy = ball.ny * FIELD_HEIGHT;
+        <label for="formation-select">Formation:</label>
+        <select id="formation-select" aria-label="Select formation"></select>
+        <button id="delete-formation-btn" class="danger" aria-label="Delete saved formation" style="display:none;">🗑</button>
 
-  let ballGroup = layer.querySelector('#ball');
-  if (ballGroup) {
-    // Update position and size
-    ballGroup.setAttribute('transform', `translate(${cx}, ${cy})`);
-    const emojiEl = ballGroup.querySelector('text');
-    if (emojiEl) emojiEl.setAttribute('font-size', String(ballSize * 2.4));
-  } else {
-    // Create soccer ball group using emoji
-    ballGroup = createSvgElement('g', {
-      id: 'ball',
-      transform: `translate(${cx}, ${cy})`,
+        <span class="toolbar-sep"></span>
+
+        <label id="opponent-toggle-label">
+          <input type="checkbox" id="opponent-toggle" aria-label="Toggle opponent overlay" />
+          Opponent
+        </label>
+        <select id="opponent-formation-select" aria-label="Opponent formation" disabled style="display:none;"></select>
+      </div>
+    </div>
+
+    <div class="toolbar-row toolbar-row-secondary">
+      <select id="moments-select" aria-label="Select situational moment">
+        <option value="">— Moments —</option>
+      </select>
+
+      <div id="moment-controls" role="group" aria-label="Moment controls" style="display:none;">
+        <input id="save-moment-name" type="text" maxlength="50" placeholder="Moment name" aria-label="Moment name" />
+        <button id="save-moment-btn" aria-label="Save as Moment">💾 Save</button>
+        <button id="duplicate-moment-btn" aria-label="Duplicate current moment" style="display:none;">📋 Copy</button>
+        <button id="delete-moment-btn" class="danger" aria-label="Delete saved moment" style="display:none;">🗑 Delete</button>
+      </div>
+
+      <div id="custom-formation-controls" style="display:none;" role="group" aria-label="Custom formation controls">
+        <input id="save-formation-name" type="text" maxlength="50" placeholder="Formation name" aria-label="Custom formation name" />
+        <button id="save-formation-btn" aria-label="Save custom formation">💾 Save</button>
+      </div>
+
+      <span class="toolbar-sep"></span>
+
+      <button id="arrow-mode-btn" aria-label="Toggle arrow drawing mode" aria-pressed="false">🏹 Arrows</button>
+      <button id="clear-arrows-btn" aria-label="Clear all arrows" style="display:none;">✕ Clear</button>
+      <button id="export-btn" aria-label="Export field as PNG image">📷 Export</button>
+      <button id="reset-btn" aria-label="Reset field to formation defaults">↺ Reset</button>
+      <button id="toggle-info-btn" aria-label="Toggle position info panel" aria-pressed="false" style="opacity:0.5;">ℹ️ Info</button>
+
+      <span id="player-count">Players: 11</span>
+    </div>
+  </header>
+
+  <!-- Main content area -->
+  <main id="main">
+
+    <!-- SVG field container -->
+    <div id="field-container" aria-label="Soccer field" style="position: relative;">
+      <!-- Floating delete arrow button (visible when arrow selected) -->
+      <button id="delete-arrow-btn" class="danger" aria-label="Delete selected arrow" style="display:none; position:absolute; top:8px; right:8px; z-index:60; padding:0.4rem 0.7rem; border:1.5px solid #e74c3c; border-radius:6px; background:#1a1a2e; color:#e74c3c; font-size:0.85rem; cursor:pointer;">🗑 Delete Arrow</button>
+      <!-- Inline label editor for custom formation tokens -->
+      <input id="token-label-input" type="text" maxlength="20" aria-label="Edit token label" style="display:none; position:absolute; width:80px; z-index:50; font-size:0.85rem; text-align:center; padding:2px 4px; border:1px solid #1E6FE8; border-radius:3px; background:#16213e; color:#fff;" />
+      <svg id="field-svg"
+           viewBox="0 0 68 105"
+           xmlns="http://www.w3.org/2000/svg"
+           role="img"
+           aria-label="Interactive soccer pitch"
+           focusable="false">
+        <!-- Field markings are rendered by renderer.js -->
+        <g id="field-markings"></g>
+        <!-- Movement arrows layer (between field markings and tokens) -->
+        <g id="arrows-layer"></g>
+        <!-- Position tokens are rendered by renderer.js -->
+        <g id="tokens-layer"></g>
+        <!-- Ball is rendered by renderer.js -->
+        <g id="ball-layer"></g>
+      </svg>
+    </div>
+
+    <!-- Position description aside panel -->
+    <aside id="description-panel" aria-label="Position description" aria-hidden="true">
+      <button id="dismiss-panel-btn" aria-label="Close position description panel">✕ Close</button>
+      <div id="description-content">
+        <!-- Populated by renderer.js when a token is selected -->
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Reusable confirmation dialog -->
+  <dialog id="confirm-dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <h3 id="dialog-title">Confirm</h3>
+    <p id="dialog-message">Are you sure?</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="dialog-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="dialog-confirm-btn">Confirm</button>
+    </div>
+  </dialog>
+
+  <!-- Name conflict dialog for custom formations -->
+  <dialog id="name-conflict-dialog" aria-modal="true" aria-labelledby="conflict-dialog-title">
+    <h3 id="conflict-dialog-title">Name Conflict</h3>
+    <p id="conflict-message">A formation with this name already exists.</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="conflict-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="conflict-rename-btn">Rename</button>
+      <button class="btn-confirm" id="conflict-overwrite-btn">Overwrite</button>
+    </div>
+  </dialog>
+
+  <!-- Name conflict dialog for moments -->
+  <dialog id="moment-conflict-dialog" aria-modal="true" aria-labelledby="moment-conflict-dialog-title">
+    <h3 id="moment-conflict-dialog-title">Name Conflict</h3>
+    <p id="moment-conflict-message">A moment with this name already exists.</p>
+    <div class="dialog-actions">
+      <button class="btn-cancel" id="moment-conflict-cancel-btn">Cancel</button>
+      <button class="btn-confirm" id="moment-conflict-rename-btn">Rename</button>
+      <button class="btn-confirm" id="moment-conflict-overwrite-btn">Overwrite</button>
+    </div>
+  </dialog>
+
+  <!-- ES module entry point -->
+  <script type="module" src="src/controller.js"></script>
+
+  <!-- Toolbar collapse toggle (mobile) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toolbar = document.getElementById('toolbar');
+      const toggle = document.getElementById('toolbar-toggle');
+      const primaryToggle = document.getElementById('primary-toggle');
+      const primaryControls = document.getElementById('primary-controls');
+      if (!toolbar || !toggle) return;
+
+      // Start with menu collapsed (show only title + toggle buttons)
+      toolbar.classList.add('collapsed');
+      toggle.textContent = '▼ Menu';
+      toggle.setAttribute('aria-expanded', 'false');
+
+      // Main toggle: show/hide entire menu
+      toggle.addEventListener('click', () => {
+        const isCollapsed = toolbar.classList.toggle('collapsed');
+        toggle.textContent = isCollapsed ? '▼ Menu' : '▲';
+        toggle.setAttribute('aria-expanded', String(!isCollapsed));
+      });
+
+      // Primary toggle: show/hide the setup section (format, formation, opponent)
+      if (primaryToggle && primaryControls) {
+        primaryToggle.addEventListener('click', () => {
+          const isHidden = primaryControls.classList.toggle('hidden');
+          primaryToggle.textContent = isHidden ? '⚙️ Setup' : '⚙️ ▲';
+        });
+      }
     });
+  </script>
 
-    const emojiText = createSvgElement('text', {
-      x: '0',
-      y: '0',
-      'text-anchor': 'middle',
-      'dominant-baseline': 'central',
-      'font-size': String(ballSize * 2.4),
-      'pointer-events': 'auto',
-      style: 'user-select: none;',
-    });
-    emojiText.textContent = '\u26BD';
-
-    ballGroup.appendChild(emojiText);
-    layer.appendChild(ballGroup);
-  }
-}
-
-// ─── Arrow Rendering ────────────────────────────────────────────────────────
-
-/**
- * Render movement arrows into the SVG field.
- * Each arrow is a quadratic bezier curve with a slight arc and an arrowhead marker.
- * Renders into the #arrows-layer group.
- *
- * @param {SVGSVGElement} svgEl - The root SVG element
- * @param {Array<{id: string, startNx: number, startNy: number, endNx: number, endNy: number}>} arrows
- */
-export function renderArrows(svgEl, arrows = []) {
-  const layer = svgEl.querySelector('#arrows-layer');
-  if (!layer) return;
-
-  // Ensure the arrowhead marker definition exists
-  ensureArrowDefs(svgEl);
-
-  // Clear and rebuild (arrows are infrequent, full rebuild is acceptable)
-  layer.innerHTML = '';
-
-  for (const arrow of arrows) {
-    const startX = arrow.startNx * FIELD_WIDTH;
-    const startY = arrow.startNy * FIELD_HEIGHT;
-    const endX = arrow.endNx * FIELD_WIDTH;
-    const endY = arrow.endNy * FIELD_HEIGHT;
-
-    // Compute control point for quadratic bezier (perpendicular offset from midpoint)
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2;
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const offset = len * 0.05; // 5% of arrow length for subtle curvature
-
-    // Perpendicular direction (rotate 90 degrees)
-    const perpX = -dy / (len || 1);
-    const perpY = dx / (len || 1);
-    const ctrlX = midX + perpX * offset;
-    const ctrlY = midY + perpY * offset;
-
-    const pathData = `M ${startX},${startY} Q ${ctrlX},${ctrlY} ${endX},${endY}`;
-
-    // Group for the arrow (id for selection)
-    const g = createSvgElement('g', {
-      id: `arrow-${arrow.id}`,
-      'data-arrow-id': arrow.id,
-      style: 'cursor: pointer;',
-    });
-
-    // Invisible wider hit area for easier clicking/tapping
-    const hitArea = createSvgElement('path', {
-      d: pathData,
-      fill: 'none',
-      stroke: 'transparent',
-      'stroke-width': '5',
-      'pointer-events': 'stroke',
-    });
-
-    // Visible arrow path
-    const path = createSvgElement('path', {
-      d: pathData,
-      fill: 'none',
-      stroke: '#f0c040',
-      'stroke-width': '0.8',
-      opacity: '0.85',
-      'stroke-linecap': 'round',
-      'marker-end': 'url(#arrowhead)',
-      'pointer-events': 'none',
-    });
-
-    g.appendChild(hitArea);
-    g.appendChild(path);
-    layer.appendChild(g);
-  }
-}
-
-/**
- * Ensure the SVG <defs> contains the arrowhead marker definition.
- * @param {SVGSVGElement} svgEl
- */
-function ensureArrowDefs(svgEl) {
-  // Check if marker already exists
-  if (svgEl.querySelector('#arrowhead')) return;
-
-  let defs = svgEl.querySelector('defs');
-  if (!defs) {
-    defs = createSvgElement('defs', {});
-    svgEl.insertBefore(defs, svgEl.firstChild);
-  }
-
-  const marker = createSvgElement('marker', {
-    id: 'arrowhead',
-    markerWidth: '4',
-    markerHeight: '4',
-    refX: '3',
-    refY: '2',
-    orient: 'auto',
-    markerUnits: 'strokeWidth',
-  });
-
-  const polygon = createSvgElement('polygon', {
-    points: '0,0 4,2 0,4',
-    fill: '#f0c040',
-    opacity: '0.85',
-  });
-
-  marker.appendChild(polygon);
-  defs.appendChild(marker);
-}
+</body>
+</html>
