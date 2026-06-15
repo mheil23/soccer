@@ -215,9 +215,9 @@ export function renderField(svgEl, format) {
     fill: 'none', stroke: '#fff', 'stroke-width': '0.3',
   }));
 
-  // Build-out line for 7v7 (dashed line between penalty area and halfway line)
+  // Build-out line for 5v5 and 7v7 (dashed line between penalty area and halfway line)
   // Positioned at y = (16.5 + 52.5) / 2 = 34.5 for top half, y = (88.5 + 52.5) / 2 = 70.5 for bottom half
-  if (format === '7v7') {
+  if (format === '5v5' || format === '7v7') {
     const topBuildOut = createSvgElement('line', {
       x1: '0', y1: '34.5', x2: '68', y2: '34.5',
       stroke: '#fff', 'stroke-width': '0.3',
@@ -267,6 +267,7 @@ const OPP_FILL = '#E81E1E';
  * @returns {number}
  */
 function getSizeScale(format) {
+  if (format === '5v5') return 1.44;
   if (format === '7v7') return 1.2;
   if (format === '9v9') return 1.1;
   return 1.0;
