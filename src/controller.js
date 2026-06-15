@@ -709,7 +709,7 @@ function populateOpponentSelect(select, format, activeKey) {
 /**
  * Token count for each format.
  */
-const FORMAT_TOKEN_COUNT = { '7v7': 7, '9v9': 9, '11v11': 11 };
+const FORMAT_TOKEN_COUNT = { '5v5': 5, '7v7': 7, '9v9': 9, '11v11': 11 };
 
 /**
  * Generate evenly distributed token positions across the own half.
