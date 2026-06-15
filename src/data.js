@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_FORMATION = {
+  "5v5": "2-1-1",
   "7v7": "2-3-1",
   "9v9": "3-3-2",
   "11v11": "4-3-3",
@@ -14,6 +15,67 @@ export const DEFAULT_FORMATION = {
 
 /** @type {import('./data.types').PresetFormation[]} */
 const PRESET_FORMATIONS = [
+  // ===========================================================================
+  // 5v5 FORMATIONS  (5 players total: 1 GK + 4 outfield)
+  // Own team attacks toward ny = 1 (bottom of field)
+  // ===========================================================================
+
+  // 5v5 — 2-1-1 (2 defenders, 1 midfielder, 1 forward)
+  {
+    id: "5v5-2-1-1",
+    name: "2-1-1",
+    format: "5v5",
+    positions: [
+      { key: "GK",  label: "GK",  nx: 0.5,  ny: 0.94, descriptionId: "GK" },
+      { key: "CB1", label: "CB",  nx: 0.3,  ny: 0.8,  descriptionId: "CB" },
+      { key: "CB2", label: "CB",  nx: 0.7,  ny: 0.8,  descriptionId: "CB" },
+      { key: "CM",  label: "CM",  nx: 0.5,  ny: 0.66, descriptionId: "CM" },
+      { key: "ST",  label: "ST",  nx: 0.5,  ny: 0.54, descriptionId: "ST" },
+    ],
+  },
+
+  // 5v5 — 1-2-1 (1 defender, 2 midfielders, 1 forward — diamond)
+  {
+    id: "5v5-1-2-1",
+    name: "1-2-1",
+    format: "5v5",
+    positions: [
+      { key: "GK",  label: "GK",  nx: 0.5,  ny: 0.94, descriptionId: "GK" },
+      { key: "CB",  label: "CB",  nx: 0.5,  ny: 0.8,  descriptionId: "CB" },
+      { key: "LM",  label: "LM",  nx: 0.25, ny: 0.66, descriptionId: "LM" },
+      { key: "RM",  label: "RM",  nx: 0.75, ny: 0.66, descriptionId: "RM" },
+      { key: "ST",  label: "ST",  nx: 0.5,  ny: 0.54, descriptionId: "ST" },
+    ],
+  },
+
+  // 5v5 — 2-2 (2 defenders, 2 forwards — flat)
+  {
+    id: "5v5-2-2",
+    name: "2-2",
+    format: "5v5",
+    positions: [
+      { key: "GK",  label: "GK",  nx: 0.5,  ny: 0.94, descriptionId: "GK" },
+      { key: "CB1", label: "CB",  nx: 0.3,  ny: 0.78, descriptionId: "CB" },
+      { key: "CB2", label: "CB",  nx: 0.7,  ny: 0.78, descriptionId: "CB" },
+      { key: "ST1", label: "ST",  nx: 0.3,  ny: 0.58, descriptionId: "ST" },
+      { key: "ST2", label: "ST",  nx: 0.7,  ny: 0.58, descriptionId: "ST" },
+    ],
+  },
+
+  // 5v5 — 3-1 (3 defenders, 1 forward — defensive)
+  {
+    id: "5v5-3-1",
+    name: "3-1",
+    format: "5v5",
+    positions: [
+      { key: "GK",  label: "GK",  nx: 0.5,  ny: 0.94, descriptionId: "GK" },
+      { key: "CB1", label: "CB",  nx: 0.2,  ny: 0.8,  descriptionId: "CB" },
+      { key: "CB2", label: "CB",  nx: 0.5,  ny: 0.78, descriptionId: "CB" },
+      { key: "CB3", label: "CB",  nx: 0.8,  ny: 0.8,  descriptionId: "CB" },
+      { key: "ST",  label: "ST",  nx: 0.5,  ny: 0.56, descriptionId: "ST" },
+    ],
+  },
+
   // ===========================================================================
   // 7v7 FORMATIONS  (7 players total: 1 GK + 6 outfield)
   // Own team attacks toward ny = 1 (bottom of field)
@@ -584,6 +646,62 @@ export function getDescriptionById(id) {
  * @type {PredefinedMoment[]}
  */
 const PREDEFINED_MOMENTS = [
+  // =========================================================================
+  // 5v5 KICKOFF
+  // =========================================================================
+
+  // 5v5 kickoff
+  {
+    id: "kickoff-5v5",
+    name: "Kickoff",
+    isPredefined: true,
+    format: "5v5",
+    ballPosition: { nx: 0.5, ny: 0.5 },
+    ownPositions: [
+      { label: "GK", nx: 0.5,  ny: 0.94 },
+      { label: "CB", nx: 0.3,  ny: 0.75 },
+      { label: "CB", nx: 0.7,  ny: 0.75 },
+      { label: "CM", nx: 0.4,  ny: 0.55 },
+      { label: "ST", nx: 0.6,  ny: 0.51 },
+    ],
+    opponentPositions: [
+      { label: "GK", nx: 0.5,  ny: 0.06 },
+      { label: "CB", nx: 0.3,  ny: 0.25 },
+      { label: "CB", nx: 0.7,  ny: 0.25 },
+      { label: "CM", nx: 0.6,  ny: 0.45 },
+      { label: "ST", nx: 0.4,  ny: 0.49 },
+    ],
+    savedAt: null,
+  },
+
+  // =========================================================================
+  // 5v5 GOAL KICK
+  // =========================================================================
+
+  // 5v5 goal kick
+  {
+    id: "goalkick-5v5",
+    name: "Goal Kick",
+    isPredefined: true,
+    format: "5v5",
+    ballPosition: { nx: 0.5, ny: 0.95 },
+    ownPositions: [
+      { label: "GK", nx: 0.5,  ny: 0.97 },
+      { label: "CB", nx: 0.3,  ny: 0.82 },
+      { label: "CB", nx: 0.7,  ny: 0.82 },
+      { label: "CM", nx: 0.5,  ny: 0.65 },
+      { label: "ST", nx: 0.5,  ny: 0.52 },
+    ],
+    opponentPositions: [
+      { label: "GK", nx: 0.5,  ny: 0.06 },
+      { label: "CB", nx: 0.5,  ny: 0.28 },
+      { label: "CM", nx: 0.35, ny: 0.42 },
+      { label: "CM", nx: 0.65, ny: 0.42 },
+      { label: "ST", nx: 0.5,  ny: 0.55 },
+    ],
+    savedAt: null,
+  },
+
   // =========================================================================
   // CORNER KICK — ATTACKING
   // Own team in opponent's box / near area; ball at opponent's corner (ny≈1)
