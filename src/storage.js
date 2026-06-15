@@ -19,7 +19,7 @@ const KEYS = {
   opponentState: `${KEY_PREFIX}.opponentState`,
 };
 
-const VALID_FORMATS = ['7v7', '9v9', '11v11'];
+const VALID_FORMATS = ['5v5', '7v7', '9v9', '11v11'];
 
 // ---------------------------------------------------------------------------
 // Custom Error
