@@ -1690,6 +1690,47 @@ export function initMomentSaveDelete(getState, setState, momentsApi, conflictDia
     });
   }
 
+  // ─── Update Moment (overwrite in place) ───────────────────────────────
+  const updateBtn = document.getElementById('update-moment-btn');
+  if (updateBtn && momentsSelect) {
+    // Show update button when a user-saved moment is active
+    momentsSelect.addEventListener('change', () => {
+      const state = getState();
+      const momentId = momentsSelect.value;
+      if (!momentId) {
+        updateBtn.style.display = 'none';
+        return;
+      }
+      // Only show for user-saved moments (not predefined)
+      const isUserMoment = state.savedMoments.some((m) => m.id === momentId);
+      updateBtn.style.display = isUserMoment ? '' : 'none';
+    });
+
+    updateBtn.addEventListener('click', () => {
+      const state = getState();
+      const momentId = state.activeMomentKey;
+      if (!momentId) return;
+
+      const existingMoment = state.savedMoments.find((m) => m.id === momentId);
+      if (!existingMoment) return;
+
+      // Build updated moment data with the same name and id
+      const updatedMoment = {
+        ...buildMomentData(state, existingMoment.name),
+        id: existingMoment.id, // Keep the same id
+      };
+
+      // Replace in state
+      const updatedMoments = state.savedMoments.map((m) =>
+        m.id === momentId ? updatedMoment : m
+      );
+      const newState = { ...state, savedMoments: updatedMoments, activeMomentKey: momentId };
+      setState(newState);
+      persistSavedMoments(newState.savedMoments);
+      showNotification(`Moment "${existingMoment.name}" updated`, 'info');
+    });
+  }
+
   // ─── Duplicate Moment ─────────────────────────────────────────────────
   const duplicateBtn = document.getElementById('duplicate-moment-btn');
   if (duplicateBtn && momentsSelect) {
