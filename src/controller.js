@@ -884,7 +884,10 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
     // Desktop: double-click
     svgEl.addEventListener('dblclick', (e) => {
       const state = getState();
-      if (state.activeFormationKey !== 'custom') return;
+      // Allow label editing in custom mode or when a user-saved moment is active
+      const isCustom = state.activeFormationKey === 'custom';
+      const isUserMoment = state.activeMomentKey && state.savedMoments.some((m) => m.id === state.activeMomentKey);
+      if (!isCustom && !isUserMoment) return;
 
       let el = e.target;
       while (el && el.tagName !== 'svg') {
@@ -903,7 +906,10 @@ export function initCustomFormationMode(getState, setState, conflictDialogFn = s
 
     svgEl.addEventListener('touchstart', (e) => {
       const state = getState();
-      if (state.activeFormationKey !== 'custom') return;
+      // Allow label editing in custom mode or when a user-saved moment is active
+      const isCustom = state.activeFormationKey === 'custom';
+      const isUserMoment = state.activeMomentKey && state.savedMoments.some((m) => m.id === state.activeMomentKey);
+      if (!isCustom && !isUserMoment) return;
 
       // Find the token being touched
       let el = e.target;
